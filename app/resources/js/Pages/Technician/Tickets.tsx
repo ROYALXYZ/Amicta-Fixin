@@ -1,0 +1,238 @@
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Badge } from '@/Components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+
+const CheckCircleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" /><path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const ZapIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const WindIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const DropletsIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M7 16.3c0 2.59 2.24 4.7 5 4.7s5-2.11 5-4.7c0-2.59-5-9.3-5-9.3s-5 6.71-5 9.3z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const Building2Icon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M4 21h16M10 21v-4a2 2 0 0 1 4 0v4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const SearchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+
+function CategoryIcon({ name, className }: { name: string; className?: string }) {
+    if (name.includes('Listrik')) return <ZapIcon className={className || "text-amber-500"} />;
+    if (name.includes('AC')) return <WindIcon className={className || "text-blue-500"} />;
+    if (name.includes('Air')) return <DropletsIcon className={className || "text-cyan-500"} />;
+    return <Building2Icon className={className || "text-stone-500"} />;
+}
+
+type WorkNote = { body: string; created_at: string | null };
+type TicketPhoto = { type: string; url: string; created_at: string | null };
+type TicketRowType = {
+    id: number; status: string; priority: string;
+    issue_category: { name: string }; building: { name: string }; unit: { number: string };
+    description: string;
+    submitted_at: string | null; assigned_at: string | null; started_at: string | null; completed_at: string | null;
+    photo_urls?: TicketPhoto[]; work_notes?: WorkNote[];
+};
+
+const fmt = (iso: string | null | undefined) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+};
+
+export default function Tickets({ tickets }: { tickets: TicketRowType[] }) {
+    const [query, setQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+
+    const filteredTickets = tickets.filter((ticket) => {
+        const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
+        const haystack = `${ticket.id} ${ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.description}`.toLowerCase();
+        const matchesQuery = query.trim() === '' || haystack.includes(query.toLowerCase());
+        return matchesStatus && matchesQuery;
+    });
+
+    const active = filteredTickets.filter((t) => !['SELESAI', 'DIBATALKAN'].includes(t.status));
+    const history = filteredTickets.filter((t) => ['SELESAI', 'DIBATALKAN'].includes(t.status));
+    const [showHistory, setShowHistory] = useState(false);
+
+    return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Teknisi</h2>}><Head title="Work Order" /><div className="mx-auto max-w-6xl p-6 lg:p-8 space-y-6">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Tugas Lapangan</h1>
+                <p className="text-slate-500">Lihat work order aktif, tambahkan catatan, dan unggah bukti penyelesaian.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:w-auto w-full">
+                <Card>
+                    <CardHeader className="p-4 pb-0">
+                        <CardTitle className="text-xs font-medium text-slate-500">Tugas Aktif</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-1">
+                        <div className="text-2xl font-bold">{active.length}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="p-4 pb-0">
+                        <CardTitle className="text-xs font-medium text-slate-500">Diselesaikan</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-1">
+                        <div className="text-2xl font-bold">{tickets.filter((t) => t.status === 'SELESAI').length}</div>
+                    </CardContent>
+                </Card>
+            </div>
+        </section>
+
+        <Card className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-500">Filter Status:</span>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Pilih Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {[['ALL', 'Semua Status'], ['DITUGASKAN', 'Baru'], ['DALAM_PENGERJAAN', 'Proses'], ['SELESAI', 'Selesai']].map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                                {label} {value === 'ALL' ? `(${tickets.length})` : `(${tickets.filter((t) => t.status === value).length})`}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="relative w-full sm:w-64 ml-auto">
+                <SearchIcon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input type="text" placeholder="Cari gedung, unit, ID..." className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+        </Card>
+
+        {active.length > 0 ? (
+            <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {active.map((t) => <WorkCard key={t.id} ticket={t} />)}
+            </section>
+        ) : (
+            <Card className="py-16 text-center shadow-sm">
+                <CardContent>
+                    <CheckCircleIcon className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+                    <p className="text-lg font-bold text-slate-900">Semua Tugas Selesai!</p>
+                    <p className="mt-1 text-sm text-slate-500">Tidak ada work order aktif saat ini.</p>
+                </CardContent>
+            </Card>
+        )}
+
+        {history.length > 0 && <section>
+            <Button type="button" variant="outline" onClick={() => setShowHistory(!showHistory)} className="mb-4 gap-2">
+                <span className={`transition-transform ${showHistory ? 'rotate-90' : ''}`}>▶</span>
+                Riwayat Pengerjaan ({history.length})
+            </Button>
+            {showHistory && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{history.map((t) => <HistoryCard key={t.id} ticket={t} />)}</div>}
+        </section>}
+    </div></AuthenticatedLayout>;
+}
+
+function WorkCard({ ticket }: { ticket: TicketRowType }) {
+    const note = useForm({ body: '' });
+    const completion = useForm({ completion_photo: null as File | null, work_note: '' });
+
+    const selectPhoto = (file: File | null) => {
+        if (!file) return;
+        if (!['image/jpeg', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+            completion.setError('completion_photo', 'Gunakan foto JPEG/WebP maksimal 2 MB.');
+            return;
+        }
+        completion.clearErrors('completion_photo');
+        completion.setData('completion_photo', file);
+    };
+
+    const priorityColor = ticket.priority === 'TINGGI' ? 'bg-red-100 text-red-900 border-red-300' : ticket.priority === 'SEDANG' ? 'bg-orange-100 text-orange-900 border-orange-300' : 'bg-slate-100 text-slate-900 border-slate-300';
+    const preview = completion.data.completion_photo ? URL.createObjectURL(completion.data.completion_photo) : null;
+    const workNotes = ticket.work_notes ?? [];
+    const damagePhotos = (ticket.photo_urls ?? []).filter((p) => p.type === 'KERUSAKAN');
+
+    return <Card className="flex flex-col">
+        <CardContent className="p-6 pb-4">
+            <div className="mb-3 flex justify-between items-start">
+                <div>
+                    <p className="text-3xl font-black text-slate-900 tracking-tight">{ticket.unit.number}</p>
+                    <p className="text-sm font-semibold text-slate-500 mt-1">{ticket.building.name}</p>
+                </div>
+                {ticket.priority === 'TINGGI' && <Badge variant="outline" className={`text-[10px] tracking-wider ${priorityColor}`}>Prioritas Tinggi</Badge>}
+            </div>
+
+            <div className="flex items-center gap-2 mb-2">
+                <CategoryIcon name={ticket.issue_category.name} className="h-4 w-4 text-slate-500" />
+                <span className="font-semibold text-slate-900 text-sm">{ticket.issue_category.name}</span>
+                <span className="text-slate-300 mx-1">•</span>
+                <span className="text-xs font-mono text-slate-400">#{ticket.id}</span>
+            </div>
+
+            <p className="line-clamp-3 text-sm text-slate-600 mb-4">{ticket.description}</p>
+            {damagePhotos.length > 0 && <div className="mb-4 flex gap-2">{damagePhotos.map((p) => <a key={p.url} href={p.url} target="_blank" rel="noreferrer"><img src={p.url} alt="Kerusakan" className="h-12 w-12 object-cover rounded-md border border-slate-200" /></a>)}</div>}
+
+            <div className="mt-auto space-y-1 text-xs text-slate-500 mb-4">
+                {ticket.assigned_at && <p>Ditugaskan: <span className="font-medium text-slate-700">{fmt(ticket.assigned_at)}</span></p>}
+                {ticket.started_at && <p>Mulai: <span className="font-medium text-slate-700">{fmt(ticket.started_at)}</span></p>}
+            </div>
+
+            {workNotes.length > 0 && (
+                <div className="mb-4 space-y-1.5 border-t border-slate-100 pt-4">
+                    <p className="text-xs font-semibold text-slate-500 mb-2">CATATAN</p>
+                    {workNotes.map((n, i) => <div key={i} className="rounded-md bg-slate-50 p-3 text-xs border border-slate-100"><p className="text-slate-700 font-medium">{n.body}</p><p className="mt-1 text-slate-400">{fmt(n.created_at)}</p></div>)}
+                </div>
+            )}
+        </CardContent>
+
+        <div className="border-t border-slate-100 p-6 bg-slate-50/50 mt-auto rounded-b-xl">
+        {ticket.status === 'DITUGASKAN' && <form onSubmit={(e) => { e.preventDefault(); note.post(route('technician.tickets.start', ticket.id)); }}><Button disabled={note.processing} className="w-full">Mulai Pengerjaan</Button></form>}
+        {ticket.status === 'DALAM_PENGERJAAN' && <div className="space-y-4">
+            <form onSubmit={(event) => { event.preventDefault(); note.post(route('technician.tickets.note', ticket.id), { onSuccess: () => { note.reset(); completion.setData('work_note', ''); } }); }}>
+                <textarea aria-label="Catatan pekerjaan" required rows={2} className="flex min-h-[60px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition" placeholder="Tambahkan progress..." value={note.data.body} onChange={(event) => { note.setData('body', event.target.value); completion.setData('work_note', event.target.value); }} />
+                {note.hasErrors && <p className="mt-1 text-xs font-medium text-red-500">{note.errors.body}</p>}
+                <Button variant="outline" size="sm" disabled={note.processing} className="mt-2 w-full">Simpan Catatan</Button>
+            </form>
+            <form className="border-t border-slate-200 pt-4" onSubmit={(event) => { event.preventDefault(); completion.post(route('technician.tickets.complete', ticket.id), { onSuccess: () => completion.reset() }); }}>
+                <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); selectPhoto(event.dataTransfer.files[0] ?? null); }} className="relative flex w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-white py-5 text-sm hover:bg-slate-50 transition-colors cursor-pointer">
+                    {preview ? <img src={preview} alt="Preview penyelesaian" className="mb-2 h-16 w-16 rounded-md border border-slate-200 object-cover shadow-sm" /> : <div className="mb-2 text-slate-400"><CheckCircleIcon className="h-6 w-6" /></div>}
+                    <span className="font-medium text-xs text-center px-4 text-slate-700">{completion.data.completion_photo ? completion.data.completion_photo.name : 'Pilih/Seret Bukti Penyelesaian'}</span>
+                    <input aria-label="Pilih foto bukti penyelesaian" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" type="file" accept="image/jpeg,image/webp" onChange={(event) => selectPhoto(event.target.files?.[0] ?? null)} />
+                </div>
+                {completion.hasErrors && <p className="mt-2 text-xs font-medium text-red-500 bg-red-50 p-2 rounded-md">{completion.errors.completion_photo}</p>}
+                <Button disabled={completion.processing} className="mt-3 w-full bg-emerald-600 text-white hover:bg-emerald-700">{completion.processing ? 'Memproses...' : 'Selesaikan Tugas'}</Button>
+            </form>
+        </div>}
+        </div>
+    </Card>;
+}
+
+function HistoryCard({ ticket }: { ticket: TicketRowType }) {
+    const completionPhotos = (ticket.photo_urls ?? []).filter((p) => p.type === 'PENYELESAIAN');
+    const workNotes = ticket.work_notes ?? [];
+
+    return <Card className="opacity-90 hover:opacity-100 transition-opacity">
+        <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+                <p className="text-2xl font-black text-slate-900">{ticket.unit.number}</p>
+                <Status status={ticket.status} />
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+                <CategoryIcon name={ticket.issue_category.name} className="h-4 w-4 text-slate-500" />
+                <p className="font-semibold text-slate-900 text-sm">{ticket.issue_category.name}</p>
+            </div>
+            <p className="text-xs font-medium text-slate-500 mb-2">{ticket.building.name} • <span className="font-mono text-[10px]">#{ticket.id}</span></p>
+            <p className="line-clamp-2 text-xs text-slate-500 mb-3">{ticket.description}</p>
+
+            <div className="mt-auto space-y-1 text-[11px] text-slate-500">
+                {ticket.started_at && <p>Mulai: {fmt(ticket.started_at)}</p>}
+                {ticket.completed_at && <p className="font-semibold text-emerald-600">Selesai: {fmt(ticket.completed_at)}</p>}
+            </div>
+
+            {workNotes.length > 0 && <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">{workNotes.map((n, i) => <div key={i} className="rounded-md bg-slate-50 p-2 text-[11px] border border-slate-100"><p className="text-slate-600 font-medium">{n.body}</p></div>)}</div>}
+            {completionPhotos.length > 0 && <div className="mt-3"><div className="flex gap-2">{completionPhotos.map((p) => <a href={p.url} target="_blank" rel="noreferrer" key={p.url}><img src={p.url} alt="Bukti" className="h-12 w-12 rounded-md border border-slate-200 object-cover" /></a>)}</div></div>}
+        </CardContent>
+    </Card>;
+}
+
+function Status({ status }: { status: string }) {
+    const map: Record<string, string> = {
+        MENUNGGU_DISPATCH: 'bg-amber-100 text-amber-900 border-amber-300',
+        DITUGASKAN: 'bg-blue-100 text-blue-900 border-blue-300',
+        DALAM_PENGERJAAN: 'bg-violet-100 text-violet-900 border-violet-300',
+        SELESAI: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+        DIBATALKAN: 'bg-slate-100 text-slate-900 border-slate-300'
+    };
+    return <Badge variant="outline" className={`text-[10px] tracking-widest ${map[status]}`}>{status.replaceAll('_', ' ')}</Badge>;
+}
