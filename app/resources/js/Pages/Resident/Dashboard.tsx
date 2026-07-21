@@ -2,19 +2,20 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { CheckCircle2, Clock3, FileText, Wrench } from 'lucide-react';
 import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
+import { CheckCircle2, Clock3, FileText, Wrench } from 'lucide-react';
 
 type Ticket = {
     id: number;
     status: string;
     description: string;
+    created_at: string;
     building: { name: string };
     unit: { number: string };
     issue_category: { name: string };
-    status_histories: { new_status: string; note: string | null; created_at: string; changed_by: { name: string } | null }[];
+    status_histories: { new_status: string; note: string | null; created_at: string; changed_by: { name: string } }[];
 };
 
 type Props = {
@@ -44,15 +45,36 @@ export default function Dashboard({ summary, recentTickets }: Props) {
         <Head title="Dashboard Penghuni" />
         <div className="mx-auto max-w-6xl space-y-8 p-6 lg:p-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div><h1 className="text-2xl font-bold tracking-tight">Halo, {user.name.split(' ')[0]}</h1><p className="mt-1 text-sm text-muted-foreground">Pantau status laporan perbaikan Anda.</p></div>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Halo, {user.name.split(' ')[0]}</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Pantau status laporan perbaikan Anda.</p>
+                </div>
                 <Button asChild><Link href={`${route('resident.tickets.index')}#buat-laporan`}>Buat Laporan</Link></Button>
             </div>
+
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {stats.map(({ label, value, icon: Icon }) => <Card key={label}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{label}</CardTitle><Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" /></CardHeader><CardContent><p className="text-2xl font-bold">{value}</p></CardContent></Card>)}
+                {stats.map(({ label, value, icon: Icon }) => <Card key={label}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">{label}</CardTitle>
+                        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    </CardHeader>
+                    <CardContent><p className="text-2xl font-bold">{value}</p></CardContent>
+                </Card>)}
             </div>
+
             <Card>
-                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Laporan Terbaru</CardTitle><CardDescription>Status empat laporan terakhir Anda.</CardDescription></div><Button variant="outline" asChild><Link href={route('resident.tickets.index')}>Lihat Semua Laporan</Link></Button></CardHeader>
-                <CardContent>{recentTickets.length ? <div className="divide-y rounded-md border">{recentTickets.map((ticket) => <button type="button" key={ticket.id} onClick={() => setSelectedTicket(ticket)} className="flex w-full flex-col gap-3 p-4 text-left transition-colors hover:bg-muted sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-sm font-medium">#{ticket.id} · {ticket.issue_category.name}</p><p className="mt-1 truncate text-sm text-muted-foreground">{ticket.building.name} · Unit {ticket.unit.number} · {ticket.description}</p></div><Badge variant="outline" className={`w-fit shrink-0 ${statusClass[ticket.status]}`}>{ticket.status.replaceAll('_', ' ')}</Badge></button>)}</div> : <div className="flex flex-col items-center gap-3 rounded-md border border-dashed px-6 py-12 text-center"><FileText className="h-8 w-8 text-muted-foreground" aria-hidden="true" /><div><p className="font-medium">Belum ada laporan</p><p className="mt-1 text-sm text-muted-foreground">Kirim laporan pertama Anda saat menemukan kerusakan.</p></div><Button asChild><Link href={`${route('resident.tickets.index')}#buat-laporan`}>Buat Laporan</Link></Button></div>}</CardContent>
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><CardTitle>Laporan Terbaru</CardTitle><CardDescription>Status empat laporan terakhir Anda.</CardDescription></div>
+                    <Button variant="outline" asChild><Link href={route('resident.tickets.index')}>Lihat Semua Laporan</Link></Button>
+                </CardHeader>
+                <CardContent>
+                    {recentTickets.length ? <div className="divide-y rounded-md border">
+                        {recentTickets.map((ticket) => <button type="button" key={ticket.id} onClick={() => setSelectedTicket(ticket)} className="flex w-full flex-col gap-3 p-4 text-left transition-colors hover:bg-muted sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0"><p className="text-sm font-medium">#{ticket.id} · {ticket.issue_category.name}</p><p className="mt-1 truncate text-sm text-muted-foreground">{ticket.building.name} · Unit {ticket.unit.number} · {ticket.description}</p></div>
+                            <Badge variant="outline" className={`w-fit shrink-0 ${statusClass[ticket.status]}`}>{ticket.status.replaceAll('_', ' ')}</Badge>
+                        </button>)}
+                    </div> : <div className="flex flex-col items-center gap-3 rounded-md border border-dashed px-6 py-12 text-center"><FileText className="h-8 w-8 text-muted-foreground" aria-hidden="true" /><div><p className="font-medium">Belum ada laporan</p><p className="mt-1 text-sm text-muted-foreground">Kirim laporan pertama Anda saat menemukan kerusakan.</p></div><Button asChild><Link href={`${route('resident.tickets.index')}#buat-laporan`}>Buat Laporan</Link></Button></div>}
+                </CardContent>
             </Card>
             <TicketDialog ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
         </div>
@@ -60,5 +82,10 @@ export default function Dashboard({ summary, recentTickets }: Props) {
 }
 
 function TicketDialog({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
-    return <Dialog open={!!ticket} onOpenChange={(open) => !open && onClose()}><DialogContent>{ticket && <><DialogHeader><DialogTitle>Detail Laporan #{ticket.id}</DialogTitle><DialogDescription>{ticket.issue_category.name} · {ticket.building.name} · Unit {ticket.unit.number}</DialogDescription></DialogHeader><p className="text-sm">{ticket.description}</p><div className="space-y-3"><p className="text-sm font-medium">Status & pesan</p>{ticket.status_histories.map((history, index) => <div key={`${history.created_at}-${index}`} className="rounded-md border p-3"><div className="flex items-center justify-between gap-3"><Badge variant="outline" className={statusClass[history.new_status]}>{history.new_status.replaceAll('_', ' ')}</Badge><span className="text-xs text-muted-foreground">{new Date(history.created_at).toLocaleString('id-ID')}</span></div>{history.note && <p className="mt-2 text-sm">{history.note}</p>}<p className="mt-2 text-xs text-muted-foreground">Diperbarui oleh {history.changed_by?.name ?? 'Sistem'}</p></div>)}</div></>}</DialogContent></Dialog>;
+    return <Dialog open={!!ticket} onOpenChange={(open) => !open && onClose()}><DialogContent>
+        {ticket && <><DialogHeader><DialogTitle>Detail Laporan #{ticket.id}</DialogTitle><DialogDescription>{ticket.issue_category.name} · {ticket.building.name} · Unit {ticket.unit.number}</DialogDescription></DialogHeader>
+            <p className="text-sm">{ticket.description}</p>
+            <div className="space-y-3"><p className="text-sm font-medium">Status & pesan</p>{ticket.status_histories.map((history, index) => <div key={`${history.created_at}-${index}`} className="rounded-md border p-3"><div className="flex items-center justify-between gap-3"><Badge variant="outline" className={statusClass[history.new_status]}>{history.new_status.replaceAll('_', ' ')}</Badge><span className="text-xs text-muted-foreground">{new Date(history.created_at).toLocaleString('id-ID')}</span></div>{history.note && <p className="mt-2 text-sm">{history.note}</p>}<p className="mt-2 text-xs text-muted-foreground">Diperbarui oleh {history.changed_by.name}</p></div>)}</div>
+        </>}
+    </DialogContent></Dialog>;
 }

@@ -177,7 +177,7 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
 }
 
 function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType; technicians: { id: number; name: string }[]; onClose: () => void }) {
-    const dispatch = useForm({ technician_id: '', priority: 'SEDANG' });
+    const dispatch = useForm({ technician_id: '', priority: 'SEDANG', message: '' });
     const cancel = useForm({ reason: '' });
     const damagePhotos = (ticket.photo_urls ?? []).filter((p) => p.type === 'KERUSAKAN');
     const completionPhotos = (ticket.photo_urls ?? []).filter((p) => p.type === 'PENYELESAIAN');
@@ -204,6 +204,7 @@ function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType;
                             <div className="space-y-2"><Label>Pilih Teknisi</Label><Select value={dispatch.data.technician_id} onValueChange={(value) => dispatch.setData('technician_id', value)}><SelectTrigger><SelectValue placeholder="-- Pilih --" /></SelectTrigger><SelectContent>{technicians.map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}</SelectContent></Select></div>
                             <div className="space-y-2"><Label>Prioritas</Label><Select value={dispatch.data.priority} onValueChange={(value) => dispatch.setData('priority', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="TINGGI">TINGGI</SelectItem><SelectItem value="SEDANG">SEDANG</SelectItem><SelectItem value="RENDAH">RENDAH</SelectItem></SelectContent></Select></div>
                         </div>
+                        <div className="space-y-2"><Label>Pesan untuk Penghuni (opsional)</Label><Input placeholder="Contoh: Teknisi telah ditugaskan, estimasi kunjungan hari ini." value={dispatch.data.message} onChange={(event) => dispatch.setData('message', event.target.value)} /></div>
                         <Button disabled={dispatch.processing} className="w-full">{dispatch.processing ? 'Menugaskan...' : 'Tugaskan Work Order'}</Button>
                     </form>
                 ) : (

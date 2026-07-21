@@ -43,7 +43,7 @@ class ResidentTicketController extends Controller
     {
         $org = TenantContext::organization($request);
 
-        return Inertia::render('Resident/Tickets', ['tickets' => Ticket::where('organization_id', $org->id)->where('reporter_id', $request->user()->id)->with(['building:id,name', 'unit:id,number', 'issueCategory:id,name'])->latest()->get(), 'buildings' => Building::where('organization_id', $org->id)->where('is_active', true)->with('units')->get(), 'categories' => IssueCategory::where('is_active', true)->get(['id', 'name'])]);
+        return Inertia::render('Resident/Tickets', ['tickets' => Ticket::where('organization_id', $org->id)->where('reporter_id', $request->user()->id)->with(['building:id,name', 'unit:id,number', 'issueCategory:id,name', 'statusHistories' => fn ($query) => $query->with('changedBy:id,name')->oldest()])->latest()->get(), 'buildings' => Building::where('organization_id', $org->id)->where('is_active', true)->with('units')->get(), 'categories' => IssueCategory::where('is_active', true)->get(['id', 'name'])]);
     }
 
     public function store(Request $request)

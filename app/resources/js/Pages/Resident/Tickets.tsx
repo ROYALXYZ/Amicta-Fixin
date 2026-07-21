@@ -1,18 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import Modal from '@/Components/Modal';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
-import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 
 const FileTextIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const ClockIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
-const CheckCircleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" /><path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const MapPinIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="10" r="3" /></svg>;
 const PlusIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 const ZapIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -28,13 +24,13 @@ function CategoryIcon({ name, className }: { name: string; className?: string })
 }
 
 type Props = { tickets: any[]; buildings: any[]; categories: any[] };
-type Option = [string | number, string];
 type TicketPhotoPreview = { name: string; url: string } | null;
+type Ticket = { id: number; status: string; description: string; created_at: string; building: { name: string }; unit: { number: string }; issue_category: { name: string }; status_histories: { new_status: string; note: string | null; created_at: string; changed_by: { name: string } }[] };
 
 export default function Tickets({ tickets, buildings, categories }: Props) {
-    const user = usePage().props.auth.user as { name: string; username?: string };
     const form = useForm({ building_id: '', unit_id: '', issue_category_id: '', description: '', damage_photo: null as File | null });
     const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
+    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const showError = (title: string, message: string) => setErrorModal({ title, message });
 
     const selectPhoto = (file: File | null) => {
@@ -53,43 +49,15 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
 
     const units = buildings.find((building) => String(building.id) === form.data.building_id)?.units ?? [];
 
-    const counts = {
-        total: tickets.length,
-        waiting: tickets.filter((ticket) => ticket.status === 'MENUNGGU_DISPATCH').length,
-        active: tickets.filter((ticket) => ['DITUGASKAN', 'DALAM_PENGERJAAN'].includes(ticket.status)).length,
-        done: tickets.filter((ticket) => ticket.status === 'SELESAI').length
-    };
-
     const preview: TicketPhotoPreview = form.data.damage_photo ? { name: form.data.damage_photo.name, url: URL.createObjectURL(form.data.damage_photo) } : null;
 
-    const statCards = [
-        { label: "Total Laporan", value: counts.total, icon: <FileTextIcon className="h-4 w-4 text-slate-500" /> },
-        { label: "Menunggu", value: counts.waiting, icon: <ClockIcon className="h-4 w-4 text-slate-500" /> },
-        { label: "Sedang Diproses", value: counts.active, icon: <WrenchIcon className="h-4 w-4 text-slate-500" /> },
-        { label: "Selesai", value: counts.done, icon: <CheckCircleIcon className="h-4 w-4 text-slate-500" /> },
-    ];
-
-    return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Penghuni</h2>}><Head title="Dashboard Penghuni" />
+    return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Laporan Saya</h2>}><Head title="Laporan Saya" />
         <div className="mx-auto max-w-6xl p-6 lg:p-8 space-y-8">
-            <div className="flex items-center justify-between space-y-2">
+            <div>
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Halo, {user.name.split(" ")[0]}</h2>
-                    <p className="text-slate-500">Kelola dan pantau laporan kerusakan {user.username ? `Unit ${user.username}` : 'fasilitas'} Anda.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Laporan Saya</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Buat laporan kerusakan dan pantau seluruh statusnya.</p>
                 </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {statCards.map(({ label, value, icon }) => (
-                    <Card key={label}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{label}</CardTitle>
-                            {icon}
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{value}</div>
-                        </CardContent>
-                    </Card>
-                ))}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -110,19 +78,31 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                             });
                         }}>
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <Select label="Gedung / Area" value={form.data.building_id} onChange={(value: string) => { form.setData('building_id', value); form.setData('unit_id', ''); }} options={buildings.map((building): Option => [building.id, building.name])} />
-                                <Select label="Unit" value={form.data.unit_id} onChange={(value: string) => form.setData('unit_id', value)} options={units.map((unit: any): Option => [unit.id, unit.number])} disabled={!form.data.building_id} />
+                                <div className="space-y-2">
+                                    <Label>Gedung / Area</Label>
+                                    <Select value={form.data.building_id} onValueChange={(value) => { form.setData('building_id', value); form.setData('unit_id', ''); }}>
+                                        <SelectTrigger><SelectValue placeholder="Pilih Gedung / Area" /></SelectTrigger>
+                                        <SelectContent>{buildings.map((building) => <SelectItem key={building.id} value={String(building.id)}>{building.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Unit</Label>
+                                    <Select value={form.data.unit_id} onValueChange={(value) => form.setData('unit_id', value)} disabled={!form.data.building_id}>
+                                        <SelectTrigger><SelectValue placeholder="Pilih Unit" /></SelectTrigger>
+                                        <SelectContent>{units.map((unit: any) => <SelectItem key={unit.id} value={String(unit.id)}>{unit.number}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Kategori Masalah</label>
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                     {categories.map((category) => (
-                                        <button type="button" key={category.id} onClick={() => form.setData('issue_category_id', String(category.id))}
-                                            className={`inline-flex flex-col items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 border h-20 gap-2 ${form.data.issue_category_id === String(category.id) ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-900/90' : 'border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900 text-slate-950'}`}>
+                                        <Button type="button" variant={form.data.issue_category_id === String(category.id) ? 'default' : 'outline'} key={category.id} onClick={() => form.setData('issue_category_id', String(category.id))}
+                                            className="h-20 flex-col gap-2">
                                             <CategoryIcon name={category.name} className="h-5 w-5" />
                                             {category.name}
-                                        </button>
+                                        </Button>
                                     ))}
                                 </div>
                                 {form.errors.issue_category_id && <p className="text-[0.8rem] font-medium text-red-500">{form.errors.issue_category_id}</p>}
@@ -167,7 +147,7 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                     <CardContent className="p-0 flex-1 overflow-y-auto max-h-[600px]">
                         <div className="divide-y divide-slate-100">
                             {tickets.map((ticket) => (
-                                <div key={ticket.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                <button type="button" key={ticket.id} onClick={() => setSelectedTicket(ticket)} className="w-full p-4 text-left transition-colors hover:bg-slate-50">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                             <span className="font-mono text-xs font-semibold text-slate-500">#{ticket.id}</span>
@@ -181,7 +161,7 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                                     <p className="text-xs text-slate-400 mt-2">
                                         {new Date(ticket.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                     </p>
-                                </div>
+                                </button>
                             ))}
                             {tickets.length === 0 && (
                                 <div className="p-8 text-center flex flex-col items-center">
@@ -194,32 +174,19 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                 </Card>
             </div>
 
-            <Modal show={!!errorModal} maxWidth="md" onClose={() => setErrorModal(null)}>
-                <div className="p-6">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-xl font-black text-red-700">!</div>
-                    <h2 className="text-lg font-bold text-slate-900">{errorModal?.title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{errorModal?.message}</p>
-                    <Button type="button" onClick={() => setErrorModal(null)} className="mt-6 w-full">Mengerti</Button>
-                </div>
-            </Modal>
+            <Dialog open={!!errorModal} onOpenChange={(open) => !open && setErrorModal(null)}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>{errorModal?.title}</DialogTitle><DialogDescription>{errorModal?.message}</DialogDescription></DialogHeader>
+                    <DialogFooter><Button type="button" onClick={() => setErrorModal(null)}>Mengerti</Button></DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
+                <DialogContent>
+                    {selectedTicket && <><DialogHeader><DialogTitle>Detail Laporan #{selectedTicket.id}</DialogTitle><DialogDescription>{selectedTicket.issue_category.name} · {selectedTicket.building.name} · Unit {selectedTicket.unit.number}</DialogDescription></DialogHeader><p className="text-sm">{selectedTicket.description}</p><div className="space-y-3"><p className="text-sm font-medium">Status & pesan</p>{selectedTicket.status_histories.map((history, index) => <div key={`${history.created_at}-${index}`} className="rounded-md border p-3"><div className="flex items-center justify-between gap-3"><Status status={history.new_status} /><span className="text-xs text-muted-foreground">{new Date(history.created_at).toLocaleString('id-ID')}</span></div>{history.note && <p className="mt-2 text-sm">{history.note}</p>}<p className="mt-2 text-xs text-muted-foreground">Diperbarui oleh {history.changed_by.name}</p></div>)}</div></>}
+                </DialogContent>
+            </Dialog>
         </div>
     </AuthenticatedLayout>;
-}
-
-function Select({ label, value, onChange, options, disabled = false }: { label: string; value: string; onChange: (value: string) => void; options: Option[]; disabled?: boolean }) {
-    return (
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{label}</label>
-            <div className="relative">
-                <select disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)}
-                    className="w-full h-11 appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-violet-400 disabled:opacity-50">
-                    <option value="">Pilih {label}</option>
-                    {options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                </select>
-                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">▼</div>
-            </div>
-        </div>
-    );
 }
 
 function Status({ status }: { status: string }) {
@@ -230,5 +197,5 @@ function Status({ status }: { status: string }) {
         SELESAI: 'bg-emerald-100 text-emerald-700 border-emerald-200',
         DIBATALKAN: 'bg-slate-100 text-slate-600 border-slate-200'
     };
-    return <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold tracking-wide uppercase ${map[status]}`}>{status.replaceAll('_', ' ')}</span>;
+    return <Badge variant="outline" className={map[status]}>{status.replaceAll('_', ' ')}</Badge>;
 }

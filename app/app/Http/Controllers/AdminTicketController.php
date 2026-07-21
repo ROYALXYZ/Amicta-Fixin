@@ -88,10 +88,10 @@ class AdminTicketController extends Controller
     {
         $o = TenantContext::organization($r);
         abort_unless($ticket->organization_id === $o->id && $ticket->status === TicketStatus::WaitingDispatch, 403);
-        $d = $r->validate(['technician_id' => 'required|integer', 'priority' => 'required|in:TINGGI,SEDANG,RENDAH']);
+        $d = $r->validate(['technician_id' => 'required|integer', 'priority' => 'required|in:TINGGI,SEDANG,RENDAH', 'message' => 'nullable|string|max:2000']);
         $u = User::where('organization_id', $o->id)->where('role', UserRole::Technician)->findOrFail($d['technician_id']);
         $ticket->update(['technician_id' => $u->id, 'priority' => $d['priority'], 'status' => TicketStatus::Assigned]);
-        TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
+        TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id, 'note' => $d['message'] ?? null]);
 
         $this->forgetTicketCache($o->id);
         return back();

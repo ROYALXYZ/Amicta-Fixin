@@ -1,3 +1,5 @@
+git status
+git branch --show-current
 <?php
 
 namespace Database\Seeders;
@@ -28,9 +30,9 @@ class DemoTenantSeeder extends Seeder
         );
 
         foreach ([
-            ['Amikom', 'amikom', 'Admin Amikom', 'admin-amikom', '628111000001', 'Teknisi Amikom', 'teknisi-amikom', '628111000002', 'Gedung Utama', 'A-101'],
-            ['Astra Motor', 'astra-motor', 'Admin Astra', 'admin-astra', '628112000001', 'Teknisi Astra', 'teknisi-astra', '628112000002', 'Gedung Operasional', 'O-101'],
-        ] as [$name, $slug, $adminName, $adminUsername, $adminPhone, $technicianName, $technicianUsername, $technicianPhone, $buildingName, $unitNumber]) {
+            ['Amikom', 'amikom', 'Admin Amikom', 'admin-amikom', '628111000001', 'Teknisi Amikom', 'teknisi-amikom', '628111000002', 'Resident Amikom', 'resident-amikom', '628111000003', 'Gedung Utama', 'A-101'],
+            ['Astra Motor', 'astra-motor', 'Admin Astra', 'admin-astra', '628112000001', 'Teknisi Astra', 'teknisi-astra', '628112000002', 'Resident Astra', 'resident-astra', '628112000003', 'Gedung Operasional', 'O-101'],
+        ] as [$name, $slug, $adminName, $adminUsername, $adminPhone, $technicianName, $technicianUsername, $technicianPhone, $residentName, $residentUsername, $residentPhone, $buildingName, $unitNumber]) {
             $organization = Organization::query()->updateOrCreate(
                 ['slug' => $slug],
                 ['name' => $name, 'is_active' => true],
@@ -58,6 +60,19 @@ class DemoTenantSeeder extends Seeder
                     'email' => $technicianPhone.'@local.invalid',
                     'password' => Hash::make('password'),
                     'role' => UserRole::Technician,
+                    'is_active' => true,
+                ],
+            );
+
+            User::query()->updateOrCreate(
+                ['username' => $residentUsername],
+                [
+                    'organization_id' => $organization->id,
+                    'name' => $residentName,
+                    'phone_number' => $residentPhone,
+                    'email' => $residentPhone.'@local.invalid',
+                    'password' => Hash::make('password'),
+                    'role' => UserRole::Resident,
                     'is_active' => true,
                 ],
             );
