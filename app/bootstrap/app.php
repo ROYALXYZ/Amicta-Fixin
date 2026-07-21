@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserBelongsToOrganization;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\AddServerTiming;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveOrganizationFromSubdomain;
 use Illuminate\Foundation\Application;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(prepend: [
+            AddServerTiming::class,
+        ]);
         $middleware->web(append: [
             ResolveOrganizationFromSubdomain::class,
             HandleInertiaRequests::class,

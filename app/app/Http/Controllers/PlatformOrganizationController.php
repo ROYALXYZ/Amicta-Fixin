@@ -30,13 +30,13 @@ class PlatformOrganizationController extends Controller
         $request->merge([
             'slug' => Str::slug((string) $request->input('slug')),
             'admin_phone_number' => $phoneNumber,
-        ]);
+        ], ['admin_username.regex' => 'Username admin tidak boleh hanya berisi angka. Gunakan minimal satu huruf, tanda hubung, atau garis bawah.']);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'slug' => ['required', 'string', 'max:63', 'regex:/^[a-z0-9-]+$/', Rule::unique('organizations')],
             'admin_name' => ['required', 'string', 'max:120'],
-            'admin_username' => ['required', 'string', 'max:50', 'alpha_dash', Rule::unique('users', 'username')],
+            'admin_username' => ['required', 'string', 'max:50', 'alpha_dash', 'regex:/.*[A-Za-z_-].*/', Rule::unique('users', 'username')],
             'admin_phone_number' => ['required', 'string', Rule::unique('users', 'phone_number')],
             'admin_password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);

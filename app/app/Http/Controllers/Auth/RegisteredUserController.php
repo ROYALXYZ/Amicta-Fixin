@@ -44,10 +44,10 @@ class RegisteredUserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:120',
-            'username' => 'required|string|max:50|alpha_dash|unique:'.User::class,
+            'username' => ['required', 'string', 'max:50', 'alpha_dash', 'regex:/.*[A-Za-z_-].*/', 'unique:'.User::class],
             'phone_number' => 'required|string|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        ], ['username.regex' => 'Username tidak boleh hanya berisi angka. Gunakan minimal satu huruf, tanda hubung, atau garis bawah.']);
 
         $user = User::create([
             'name' => $request->name,

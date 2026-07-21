@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminTicketController;
+use App\Http\Controllers\AdminTechnicianController;
 use App\Http\Controllers\PlatformOrganizationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResidentTicketController;
@@ -20,7 +21,7 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return redirect()->route(match (request()->user()->role->value) {
-        'RESIDENT' => 'resident.tickets.index', 'ADMIN' => 'admin.tickets.index', 'TECHNICIAN' => 'technician.tickets.index', default => 'platform.organizations.index',
+        'RESIDENT' => 'resident.dashboard', 'ADMIN' => 'admin.tickets.index', 'TECHNICIAN' => 'technician.tickets.index', default => 'platform.organizations.index',
     });
 })->middleware(['auth', 'verified', 'tenant.user'])->name('dashboard');
 
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'tenant.user'])->group(function () {
 });
 
 Route::middleware(['auth', 'tenant.user', 'role:RESIDENT'])->prefix('resident')->name('resident.')->group(function () {
+    Route::get('/dashboard', [ResidentTicketController::class, 'dashboard'])->name('dashboard');
     Route::get('/tickets', [ResidentTicketController::class, 'index'])->name('tickets.index');
     Route::post('/tickets', [ResidentTicketController::class, 'store'])->name('tickets.store');
 });
@@ -44,9 +46,14 @@ Route::middleware(['auth', 'tenant.user', 'role:TECHNICIAN'])->prefix('technicia
 
 Route::middleware(['auth', 'tenant.user', 'role:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show');
+    Route::get('/technicians', [AdminTechnicianController::class, 'index'])->name('technicians.index');
     Route::post('/buildings', [AdminTicketController::class, 'building'])->name('buildings.store');
     Route::post('/units', [AdminTicketController::class, 'unit'])->name('units.store');
-    Route::post('/technicians', [AdminTicketController::class, 'technician'])->name('technicians.store');
+    Route::post('/technicians', [AdminTechnicianController::class, 'store'])->name('technicians.store');
+    Route::patch('/technicians/{technician}', [AdminTechnicianController::class, 'update'])->name('technicians.update');
+    Route::patch('/technicians/{technician}/toggle', [AdminTechnicianController::class, 'toggle'])->name('technicians.toggle');
+    Route::delete('/technicians/{technician}', [AdminTechnicianController::class, 'destroy'])->name('technicians.destroy');
     Route::post('/tickets/{ticket}/dispatch', [AdminTicketController::class, 'dispatch'])->name('tickets.dispatch');
     Route::post('/tickets/{ticket}/cancel', [AdminTicketController::class, 'cancel'])->name('tickets.cancel');
 });

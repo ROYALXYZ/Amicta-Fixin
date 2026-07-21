@@ -20,7 +20,7 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_users_can_authenticate_using_a_phone_number(): void
     {
         $organization = $this->createOrganization();
         $user = User::factory()->create([
@@ -29,7 +29,24 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response = $this->post('http://amikom.example.test/login', [
-            'phone_number' => $user->phone_number,
+            'login' => $user->phone_number,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_users_can_authenticate_using_a_username(): void
+    {
+        $organization = $this->createOrganization();
+        $user = User::factory()->create([
+            'organization_id' => $organization->id,
+            'username' => 'admin-amikom',
+        ]);
+
+        $response = $this->post('http://amikom.example.test/login', [
+            'login' => $user->username,
             'password' => 'password',
         ]);
 
@@ -45,7 +62,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->post('http://amikom.example.test/login', [
-            'phone_number' => $user->phone_number,
+            'login' => $user->phone_number,
             'password' => 'wrong-password',
         ]);
 
@@ -65,7 +82,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->post('http://astra-motor.example.test/login', [
-            'phone_number' => $user->phone_number,
+            'login' => $user->phone_number,
             'password' => 'password',
         ]);
 

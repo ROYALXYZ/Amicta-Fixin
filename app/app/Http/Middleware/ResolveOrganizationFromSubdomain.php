@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Organization;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class ResolveOrganizationFromSubdomain
@@ -24,10 +25,10 @@ class ResolveOrganizationFromSubdomain
             abort(404);
         }
 
-        $organization = Organization::query()
+        $organization = Cache::remember("tenant:{$slug}", now()->addMinute(), fn () => Organization::query()
             ->where('slug', $slug)
             ->where('is_active', true)
-            ->firstOrFail();
+            ->firstOrFail());
 
         $request->attributes->set('organization', $organization);
 

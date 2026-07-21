@@ -93,7 +93,7 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
+                <Card id="buat-laporan" className="col-span-4">
                     <CardHeader>
                         <CardTitle>Lapor Kerusakan Baru</CardTitle>
                         <CardDescription>Lengkapi informasi agar teknisi dapat menangani masalah dengan tepat.</CardDescription>

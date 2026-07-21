@@ -16,6 +16,29 @@ use Inertia\Inertia;
 
 class ResidentTicketController extends Controller
 {
+    public function dashboard(Request $request)
+    {
+        $org = TenantContext::organization($request);
+        $tickets = Ticket::query()
+            ->where('organization_id', $org->id)
+            ->where('reporter_id', $request->user()->id);
+
+        return Inertia::render('Resident/Dashboard', [
+            'summary' => [
+                'total' => (clone $tickets)->count(),
+                'pending' => (clone $tickets)->whereIn('status', [TicketStatus::WaitingDispatch->value, TicketStatus::Assigned->value])->count(),
+                'inProgress' => (clone $tickets)->where('status', TicketStatus::InProgress->value)->count(),
+                'completed' => (clone $tickets)->where('status', TicketStatus::Completed->value)->count(),
+            ],
+            'recentTickets' => $tickets->with([
+                'building:id,name',
+                'unit:id,number',
+                'issueCategory:id,name',
+                'statusHistories' => fn ($query) => $query->with('changedBy:id,name')->oldest(),
+            ])->latest()->limit(4)->get(),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $org = TenantContext::organization($request);
@@ -26,7 +49,18 @@ class ResidentTicketController extends Controller
     public function store(Request $request)
     {
         $org = TenantContext::organization($request);
-        $data = $request->validate(['building_id' => 'required|integer', 'unit_id' => 'required|integer', 'issue_category_id' => 'required|integer', 'description' => 'required|string|max:10000', 'damage_photo' => 'required|file|mimes:jpg,jpeg,webp|max:2048']);
+        $data = $request->validate([
+            'building_id' => 'required|integer',
+            'unit_id' => 'required|integer',
+            'issue_category_id' => 'required|integer',
+            'description' => 'required|string|max:10000',
+            'damage_photo' => 'required|file|mimes:jpg,jpeg,webp|max:2048',
+        ], [
+            'damage_photo.required' => 'Pilih foto kerusakan terlebih dahulu.',
+            'damage_photo.file' => 'Berkas foto tidak dapat dibaca. Pilih ulang foto dari perangkat Anda.',
+            'damage_photo.mimes' => 'Berkas ini tidak terdeteksi sebagai JPEG atau WebP, meskipun ekstensi namanya mungkin .jpg/.jpeg. Ekspor atau pilih foto lain.',
+            'damage_photo.max' => 'Ukuran foto melebihi 2 MB. Kompres atau pilih foto yang lebih kecil.',
+        ]);
         $building = Building::where('organization_id', $org->id)->where('is_active', true)->findOrFail($data['building_id']);
         Unit::where('organization_id', $org->id)->where('building_id', $building->id)->where('is_active', true)->findOrFail($data['unit_id']);
         IssueCategory::where('is_active', true)->findOrFail($data['issue_category_id']);
@@ -42,7 +76,7 @@ class ResidentTicketController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
 
-            return back()->withErrors(['damage_photo' => 'Foto gagal diunggah. Pastikan JPEG/WebP maksimal 2 MB, lalu coba lagi.']);
+            return back()->withErrors(['damage_photo' => 'Foto sudah valid, tetapi penyimpanan gagal. Coba lagi beberapa saat.']);
         }
 
         return back();

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -56,15 +56,16 @@ type TicketRowType = {
     submitted_at: string | null; assigned_at: string | null; started_at: string | null; completed_at: string | null;
     photo_urls?: TicketPhoto[]; work_notes?: WorkNote[];
 };
+type TicketPage = { data: TicketRowType[]; current_page: number; last_page: number; total: number };
 
-export default function Tickets({ tickets, technicians }: { tickets: TicketRowType[]; technicians: { id: number; name: string }[] }) {
+export default function Tickets({ tickets, statusCounts, technicians }: { tickets: TicketPage; statusCounts: Record<string, number>; technicians: { id: number; name: string }[] }) {
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedTicket, setSelectedTicket] = useState<TicketRowType | null>(null);
-    const [showAddTeknisi, setShowAddTeknisi] = useState(false);
+    const [loadingTicket, setLoadingTicket] = useState<number | null>(null);
 
-    const stat = (status: string) => tickets.filter((t) => t.status === status).length;
-    const filteredTickets = tickets.filter((ticket) => {
+    const stat = (status: string) => statusCounts[status] ?? 0;
+    const filteredTickets = tickets.data.filter((ticket) => {
         const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
         const haystack = `${ticket.id} ${ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.reporter.name} ${ticket.technician?.name ?? ''} ${ticket.description}`.toLowerCase();
         const matchesQuery = query.trim() === '' || haystack.includes(query.toLowerCase());
@@ -72,13 +73,11 @@ export default function Tickets({ tickets, technicians }: { tickets: TicketRowTy
     });
 
     const statCards = [
-        { label: 'Total Tiket', value: tickets.length, icon: <FileTextIcon className="h-4 w-4 text-slate-500" /> },
+        { label: 'Total Tiket', value: tickets.total, icon: <FileTextIcon className="h-4 w-4 text-slate-500" /> },
         { label: 'Menunggu', value: stat('MENUNGGU_DISPATCH'), icon: <ClockIcon className="h-4 w-4 text-slate-500" /> },
         { label: 'Diproses', value: stat('DALAM_PENGERJAAN') + stat('DITUGASKAN'), icon: <WrenchIcon className="h-4 w-4 text-slate-500" /> },
         { label: 'Selesai', value: stat('SELESAI'), icon: <CheckCircleIcon className="h-4 w-4 text-slate-500" /> },
     ];
-
-    const techForm = useForm({ name: '', username: '', phone_number: '', password: '' });
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Admin</h2>}><Head title="Admin" />
         <div className="mx-auto max-w-7xl p-6 lg:p-8 space-y-6">
@@ -87,7 +86,7 @@ export default function Tickets({ tickets, technicians }: { tickets: TicketRowTy
                     <h1 className="text-3xl font-bold tracking-tight">Manajemen Tiket</h1>
                     <p className="text-slate-500">Pantau antrean, assignment teknisi, dan status penyelesaian.</p>
                 </div>
-                <Button onClick={() => setShowAddTeknisi(true)} className="gap-2"><PlusIcon className="h-4 w-4" /> Tambah Teknisi</Button>
+                <Button asChild className="gap-2"><Link href={route('admin.technicians.index')}><PlusIcon className="h-4 w-4" /> Kelola Tukang</Link></Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -101,6 +100,15 @@ export default function Tickets({ tickets, technicians }: { tickets: TicketRowTy
                     </Card>
                 ))}
             </div>
+
+            <Card>
+                <CardHeader><CardTitle>Distribusi Status Laporan</CardTitle><CardDescription>Komposisi seluruh tiket organisasi.</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                    {[
+                        ['Menunggu dispatch', 'MENUNGGU_DISPATCH', 'bg-amber-500'], ['Ditugaskan', 'DITUGASKAN', 'bg-blue-500'], ['Dalam pengerjaan', 'DALAM_PENGERJAAN', 'bg-violet-500'], ['Selesai', 'SELESAI', 'bg-emerald-500'], ['Dibatalkan', 'DIBATALKAN', 'bg-slate-400'],
+                    ].map(([label, status, color]) => { const value = stat(status); const percentage = tickets.total ? Math.round(value / tickets.total * 100) : 0; return <div key={status} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm"><span>{label}</span><div className="h-3 overflow-hidden rounded-full bg-muted"><div className={`${color} h-full rounded-full`} style={{ width: `${percentage}%` }} /></div><span className="text-right font-medium">{value}</span></div>; })}
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -133,7 +141,7 @@ export default function Tickets({ tickets, technicians }: { tickets: TicketRowTy
                         </TableHeader>
                         <TableBody>
                             {filteredTickets.map(ticket => (
-                                <TableRow key={ticket.id} className="cursor-pointer" onClick={() => setSelectedTicket(ticket)}>
+                                <TableRow key={ticket.id} className="cursor-pointer" onClick={() => openTicket(ticket.id)}>
                                     <TableCell className="font-mono text-xs font-semibold text-slate-700">#{ticket.id}</TableCell>
                                     <TableCell className="text-xs text-slate-500 whitespace-nowrap">{ticket.submitted_at ? new Date(ticket.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</TableCell>
                                     <TableCell>{ticket.reporter.name}</TableCell>
@@ -141,12 +149,13 @@ export default function Tickets({ tickets, technicians }: { tickets: TicketRowTy
                                     <TableCell><div className="flex items-center gap-2"><CategoryIcon name={ticket.issue_category.name} className="h-4 w-4" />{ticket.issue_category.name}</div></TableCell>
                                     <TableCell>{ticket.technician ? <span>{ticket.technician.name}</span> : <span className="text-xs italic text-slate-400">Belum ada</span>}</TableCell>
                                     <TableCell><Status status={ticket.status} /></TableCell>
-                                    <TableCell><Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }}>Buka</Button></TableCell>
+                                    <TableCell><Button variant="outline" size="sm" disabled={loadingTicket === ticket.id} onClick={(e) => { e.stopPropagation(); openTicket(ticket.id); }}>{loadingTicket === ticket.id ? 'Memuat...' : 'Buka'}</Button></TableCell>
                                 </TableRow>
                             ))}
                             {filteredTickets.length === 0 && <TableRow><TableCell colSpan={8} className="h-24 text-center text-slate-500">Tidak ada tiket ditemukan</TableCell></TableRow>}
                         </TableBody>
                     </Table>
+                    {tickets.last_page > 1 && <div className="mt-4 flex items-center justify-between text-sm"><span className="text-muted-foreground">Halaman {tickets.current_page} dari {tickets.last_page}</span><div className="flex gap-2"><Button asChild variant="outline" size="sm" disabled={tickets.current_page === 1}><Link href={route('admin.tickets.index', { page: tickets.current_page - 1 })}>Sebelumnya</Link></Button><Button asChild variant="outline" size="sm" disabled={tickets.current_page === tickets.last_page}><Link href={route('admin.tickets.index', { page: tickets.current_page + 1 })}>Berikutnya</Link></Button></div></div>}
                 </CardContent>
             </Card>
 
@@ -156,23 +165,15 @@ export default function Tickets({ tickets, technicians }: { tickets: TicketRowTy
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={showAddTeknisi} onOpenChange={setShowAddTeknisi}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Tambah Teknisi Baru</DialogTitle>
-                        <DialogDescription>Buat akun teknisi untuk assignment work order.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={(e) => { e.preventDefault(); techForm.post(route('admin.technicians.store'), { onSuccess: () => { techForm.reset(); setShowAddTeknisi(false); } }); }} className="space-y-4">
-                        <div className="space-y-2"><Label>Nama Teknisi</Label><Input required value={techForm.data.name} onChange={e => techForm.setData('name', e.target.value)} /></div>
-                        <div className="space-y-2"><Label>Username (Login)</Label><Input required value={techForm.data.username} onChange={e => techForm.setData('username', e.target.value)} /></div>
-                        <div className="space-y-2"><Label>No WhatsApp</Label><Input required type="tel" value={techForm.data.phone_number} onChange={e => techForm.setData('phone_number', e.target.value)} />{techForm.errors.phone_number && <p className="text-xs text-red-500">{techForm.errors.phone_number}</p>}</div>
-                        <div className="space-y-2"><Label>Password Sementara</Label><Input required minLength={8} type="password" value={techForm.data.password} onChange={e => techForm.setData('password', e.target.value)} /></div>
-                        <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setShowAddTeknisi(false)}>Batal</Button><Button disabled={techForm.processing}>Simpan Teknisi</Button></div>
-                    </form>
-                </DialogContent>
-            </Dialog>
         </div>
     </AuthenticatedLayout>;
+
+    async function openTicket(id: number) {
+        setLoadingTicket(id);
+        try { const response = await window.axios.get<TicketRowType>(route('admin.tickets.show', id)); setSelectedTicket(response.data); }
+        catch { window.alert('Detail tiket gagal dimuat. Coba lagi.'); }
+        finally { setLoadingTicket(null); }
+    }
 }
 
 function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType; technicians: { id: number; name: string }[]; onClose: () => void }) {

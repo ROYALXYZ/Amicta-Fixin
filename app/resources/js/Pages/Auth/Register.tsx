@@ -1,146 +1,18 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import GuestLayout from '@/Layouts/GuestLayout';
+import { Button } from '@/Components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { Wrench } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
-        username: '',
-        phone_number: '',
-        password: '',
-        password_confirmation: '',
-    });
+    const { data, setData, post, processing, errors, reset } = useForm({ name: '', username: '', phone_number: '', password: '', password_confirmation: '' });
+    const submit: FormEventHandler = (event) => { event.preventDefault(); post(route('register'), { onFinish: () => reset('password', 'password_confirmation') }); };
+    const error = (message?: string) => message && <p className="text-sm font-medium text-destructive">{message}</p>;
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
-
-        post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
-        });
-    };
-
-    return (
-        <GuestLayout>
-            <Head title="Register" />
-
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="username" value="Username" />
-
-                    <TextInput
-                        id="username"
-                        name="username"
-                        value={data.username}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={(e) => setData('username', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.username} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel
-                        htmlFor="phone_number"
-                        value="Nomor WhatsApp"
-                    />
-
-                    <TextInput
-                        id="phone_number"
-                        type="tel"
-                        name="phone_number"
-                        value={data.phone_number}
-                        className="mt-1 block w-full"
-                        autoComplete="tel"
-                        onChange={(e) =>
-                            setData('phone_number', e.target.value)
-                        }
-                        required
-                    />
-
-                    <InputError
-                        message={errors.phone_number}
-                        className="mt-2"
-                    />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Confirm Password"
-                    />
-
-                    <TextInput
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
-                        required
-                    />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
-                </div>
-
-                <div className="mt-4 flex items-center justify-end">
-                    <Link
-                        href={route('login')}
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Already registered?
-                    </Link>
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
-                    </PrimaryButton>
-                </div>
-            </form>
-        </GuestLayout>
-    );
+    return <div className="min-h-screen bg-muted/30 px-4 py-8 sm:px-6 lg:grid lg:grid-cols-2 lg:p-0"><Head title="Daftar" />
+        <section className="hidden bg-slate-950 p-12 text-slate-100 lg:flex lg:flex-col lg:justify-between xl:p-16"><Link href="/" className="flex w-fit items-center gap-3"><span className="flex size-9 items-center justify-center rounded-lg bg-primary"><Wrench className="size-4" /></span><span className="text-lg font-bold">FixIn</span></Link><div className="max-w-lg"><p className="mb-4 text-sm font-medium text-violet-300">Akun penghuni</p><h1 className="text-4xl font-bold tracking-tight">Laporkan kerusakan dengan lebih mudah.</h1><p className="mt-5 leading-7 text-slate-400">Daftar untuk membuat laporan, melihat progres, dan menerima pembaruan perbaikan.</p></div><p className="text-sm text-slate-500">Akun terhubung dengan organisasi pada alamat situs ini.</p></section>
+        <main className="flex items-center justify-center lg:bg-background lg:p-12"><Card className="w-full max-w-md shadow-sm"><CardHeader><CardTitle>Buat akun</CardTitle><CardDescription>Isi data berikut untuk mulai menggunakan FixIn.</CardDescription></CardHeader><CardContent><form onSubmit={submit} className="space-y-5"><div className="space-y-2"><Label htmlFor="name">Nama lengkap</Label><Input id="name" autoComplete="name" value={data.name} onChange={(event) => setData('name', event.target.value)} aria-invalid={!!errors.name} required autoFocus />{error(errors.name)}</div><div className="space-y-2"><Label htmlFor="username">Username</Label><Input id="username" autoComplete="username" placeholder="Gunakan huruf, angka, - atau _" value={data.username} onChange={(event) => setData('username', event.target.value)} aria-invalid={!!errors.username} required />{error(errors.username)}<p className="text-xs text-muted-foreground">Tidak boleh hanya berisi angka.</p></div><div className="space-y-2"><Label htmlFor="phone_number">Nomor WhatsApp</Label><Input id="phone_number" type="tel" autoComplete="tel" placeholder="Contoh: 081234567890" value={data.phone_number} onChange={(event) => setData('phone_number', event.target.value)} aria-invalid={!!errors.phone_number} required />{error(errors.phone_number)}</div><div className="space-y-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" autoComplete="new-password" value={data.password} onChange={(event) => setData('password', event.target.value)} aria-invalid={!!errors.password} required />{error(errors.password)}</div><div className="space-y-2"><Label htmlFor="password_confirmation">Konfirmasi password</Label><Input id="password_confirmation" type="password" autoComplete="new-password" value={data.password_confirmation} onChange={(event) => setData('password_confirmation', event.target.value)} aria-invalid={!!errors.password_confirmation} required />{error(errors.password_confirmation)}</div><Button type="submit" className="w-full" disabled={processing}>{processing ? 'Membuat akun...' : 'Buat akun'}</Button></form><p className="mt-6 text-center text-sm text-muted-foreground">Sudah punya akun? <Link href={route('login')} className="font-medium text-primary hover:underline">Masuk</Link></p></CardContent></Card></main>
+    </div>;
 }

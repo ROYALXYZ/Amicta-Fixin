@@ -66,6 +66,11 @@ class TechnicianTicketController extends Controller
         $d = $r->validate([
             'completion_photo' => 'required|file|mimes:jpg,jpeg,webp|max:2048',
             'work_note' => 'nullable|string|max:2000',
+        ], [
+            'completion_photo.required' => 'Pilih foto bukti penyelesaian terlebih dahulu.',
+            'completion_photo.file' => 'Berkas foto tidak dapat dibaca. Pilih ulang foto dari perangkat Anda.',
+            'completion_photo.mimes' => 'Berkas ini tidak terdeteksi sebagai JPEG atau WebP, meskipun ekstensi namanya mungkin .jpg/.jpeg. Ekspor atau pilih foto lain.',
+            'completion_photo.max' => 'Ukuran foto melebihi 2 MB. Kompres atau pilih foto yang lebih kecil.',
         ]);
         if (filled($d['work_note'] ?? null)) {
             TicketWorkNote::create([
