@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Events\OrganizationTicketsChanged;
 use App\Models\Building;
 use App\Models\Ticket;
 use App\Models\TicketStatusHistory;
@@ -23,14 +24,14 @@ class AdminTicketController extends Controller
     {
         $org = TenantContext::organization($request);
 
-        $page = $request->integer('page', 1);
-        $tickets = Cache::remember("admin:{$org->id}:tickets:{$page}", now()->addSeconds(30), fn () => Ticket::where('organization_id', $org->id)
+        $perPage = in_array($request->integer('per_page'), [5, 10, 25], true) ? $request->integer('per_page') : 5;
+        $tickets = Ticket::where('organization_id', $org->id)
             ->with(['building:id,name', 'unit:id,number', 'reporter:id,name', 'technician:id,name', 'issueCategory:id,name'])
-            ->latest()->paginate(20)->through(fn (Ticket $ticket) => [
-                'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory,
+            ->latest()->paginate($perPage)->withQueryString()->through(fn (Ticket $ticket) => [
+                'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory, 'custom_issue_category' => $ticket->custom_issue_category,
                 'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter,
                 'technician' => $ticket->technician, 'submitted_at' => $ticket->created_at?->toIso8601String(),
-            ]));
+            ]);
         $statusCounts = Cache::remember("admin:{$org->id}:ticket-status-counts", now()->addMinute(), fn () => Ticket::where('organization_id', $org->id)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'));
 
         return Inertia::render('Admin/Tickets', ['tickets' => $tickets, 'statusCounts' => $statusCounts, 'technicians' => Cache::remember("admin:{$org->id}:active-technicians", now()->addMinute(), fn () => User::where('organization_id', $org->id)->where('role', UserRole::Technician)->where('is_active', true)->get(['id', 'name']))]);
@@ -44,7 +45,7 @@ class AdminTicketController extends Controller
         $history = fn (TicketStatus $status) => $ticket->statusHistories->firstWhere('new_status', $status);
 
         return response()->json([
-            'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory,
+            'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory, 'custom_issue_category' => $ticket->custom_issue_category,
             'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter, 'technician' => $ticket->technician,
             'description' => $ticket->description, 'priority' => $ticket->priority?->value,
             'submitted_at' => $ticket->created_at?->toIso8601String(), 'assigned_at' => $history(TicketStatus::Assigned)?->created_at?->toIso8601String(),
@@ -63,11 +64,24 @@ class AdminTicketController extends Controller
         return back();
     }
 
+    public function locations(Request $request)
+    {
+        $organization = TenantContext::organization($request);
+
+        return Inertia::render('Admin/Locations', [
+            'buildings' => Building::where('organization_id', $organization->id)
+                ->with(['units' => fn ($query) => $query->orderBy('number')])
+                ->orderBy('name')
+                ->get(['id', 'name', 'is_active']),
+        ]);
+    }
+
     public function unit(Request $r)
     {
         $o = TenantContext::organization($r);
         $d = $r->validate(['building_id' => 'required|integer', 'number' => 'required|string|max:50']);
-        Building::where('organization_id', $o->id)->findOrFail($d['building_id']);
+        $building = Building::where('organization_id', $o->id)->findOrFail($d['building_id']);
+        abort_if(Unit::where('organization_id', $o->id)->where('building_id', $building->id)->where('number', $d['number'])->exists(), 422, 'Unit sudah ada di gedung/area ini.');
         Unit::create(['organization_id' => $o->id, ...$d]);
 
         return back();
@@ -94,6 +108,7 @@ class AdminTicketController extends Controller
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
 
         $this->forgetTicketCache($o->id);
+        OrganizationTicketsChanged::dispatch($o->id, 'updated');
         return back();
     }
 
@@ -107,6 +122,7 @@ class AdminTicketController extends Controller
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => $old, 'new_status' => TicketStatus::Cancelled, 'changed_by' => $r->user()->id, 'note' => $d['reason']]);
 
         $this->forgetTicketCache($o->id);
+        OrganizationTicketsChanged::dispatch($o->id, 'updated');
         return back();
     }
 

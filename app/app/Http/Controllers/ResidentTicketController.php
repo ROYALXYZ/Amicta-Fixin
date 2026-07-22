@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TicketStatus;
+use App\Events\OrganizationTicketsChanged;
 use App\Models\Building;
 use App\Models\IssueCategory;
 use App\Models\Ticket;
@@ -11,6 +12,7 @@ use App\Models\TicketStatusHistory;
 use App\Models\Unit;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -19,6 +21,7 @@ class ResidentTicketController extends Controller
     public function dashboard(Request $request)
     {
         $org = TenantContext::organization($request);
+        $perPage = in_array($request->integer('per_page'), [5, 10, 25], true) ? $request->integer('per_page') : 5;
         $tickets = Ticket::query()
             ->where('organization_id', $org->id)
             ->where('reporter_id', $request->user()->id);
@@ -35,15 +38,16 @@ class ResidentTicketController extends Controller
                 'unit:id,number',
                 'issueCategory:id,name',
                 'statusHistories' => fn ($query) => $query->with('changedBy:id,name')->oldest(),
-            ])->latest()->limit(4)->get(),
+            ])->latest()->paginate($perPage)->withQueryString(),
         ]);
     }
 
     public function index(Request $request)
     {
         $org = TenantContext::organization($request);
+        $perPage = in_array($request->integer('per_page'), [5, 10, 25], true) ? $request->integer('per_page') : 5;
 
-        return Inertia::render('Resident/Tickets', ['tickets' => Ticket::where('organization_id', $org->id)->where('reporter_id', $request->user()->id)->with(['building:id,name', 'unit:id,number', 'issueCategory:id,name'])->latest()->get(), 'buildings' => Building::where('organization_id', $org->id)->where('is_active', true)->with('units')->get(), 'categories' => IssueCategory::where('is_active', true)->get(['id', 'name'])]);
+        return Inertia::render('Resident/Tickets', ['tickets' => Ticket::where('organization_id', $org->id)->where('reporter_id', $request->user()->id)->with(['building:id,name', 'unit:id,number', 'issueCategory:id,name'])->latest()->paginate($perPage)->withQueryString(), 'buildings' => Building::where('organization_id', $org->id)->where('is_active', true)->with('units')->get()]);
     }
 
     public function store(Request $request)
@@ -52,7 +56,7 @@ class ResidentTicketController extends Controller
         $data = $request->validate([
             'building_id' => 'required|integer',
             'unit_id' => 'required|integer',
-            'issue_category_id' => 'required|integer',
+            'issue_category_name' => 'required|string|max:120',
             'description' => 'required|string|max:10000',
             'damage_photo' => 'required|file|mimes:jpg,jpeg,webp|max:2048',
         ], [
@@ -63,10 +67,10 @@ class ResidentTicketController extends Controller
         ]);
         $building = Building::where('organization_id', $org->id)->where('is_active', true)->findOrFail($data['building_id']);
         Unit::where('organization_id', $org->id)->where('building_id', $building->id)->where('is_active', true)->findOrFail($data['unit_id']);
-        IssueCategory::where('is_active', true)->findOrFail($data['issue_category_id']);
+        $category = IssueCategory::firstOrCreate(['code' => 'LAINNYA'], ['name' => 'Lainnya', 'is_active' => true]);
         try {
-            DB::transaction(function () use ($data, $org, $request) {
-                $ticket = Ticket::create(['organization_id' => $org->id, 'reporter_id' => $request->user()->id, 'building_id' => $data['building_id'], 'unit_id' => $data['unit_id'], 'issue_category_id' => $data['issue_category_id'], 'description' => $data['description'], 'status' => TicketStatus::WaitingDispatch]);
+            DB::transaction(function () use ($data, $org, $request, $category) {
+                $ticket = Ticket::create(['organization_id' => $org->id, 'reporter_id' => $request->user()->id, 'building_id' => $data['building_id'], 'unit_id' => $data['unit_id'], 'issue_category_id' => $category->id, 'custom_issue_category' => $data['issue_category_name'], 'description' => $data['description'], 'status' => TicketStatus::WaitingDispatch]);
                 $file = $request->file('damage_photo');
                 $path = "organizations/{$org->id}/tickets/{$ticket->id}/damage.".($file->extension() ?: 'jpg');
                 $file->storeAs(dirname($path), basename($path), 'supabase');
@@ -78,6 +82,10 @@ class ResidentTicketController extends Controller
 
             return back()->withErrors(['damage_photo' => 'Foto sudah valid, tetapi penyimpanan gagal. Coba lagi beberapa saat.']);
         }
+
+        Cache::forget("admin:{$org->id}:tickets:1");
+        Cache::forget("admin:{$org->id}:ticket-status-counts");
+        OrganizationTicketsChanged::dispatch($org->id, 'created');
 
         return back();
     }

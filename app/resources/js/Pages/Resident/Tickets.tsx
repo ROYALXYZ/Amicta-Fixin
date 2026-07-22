@@ -1,12 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Modal from '@/Components/Modal';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
-import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
+import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 
 const FileTextIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ClockIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -15,25 +15,15 @@ const CheckCircleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <
 const MapPinIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="10" r="3" /></svg>;
 const PlusIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-const ZapIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const WindIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const DropletsIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M7 16.3c0 2.59 2.24 4.7 5 4.7s5-2.11 5-4.7c0-2.59-5-9.3-5-9.3s-5 6.71-5 9.3z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const Building2Icon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M4 21h16M10 21v-4a2 2 0 0 1 4 0v4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-function CategoryIcon({ name, className }: { name: string; className?: string }) {
-    if (name.includes('Listrik')) return <ZapIcon className={className} />;
-    if (name.includes('AC')) return <WindIcon className={className} />;
-    if (name.includes('Air')) return <DropletsIcon className={className} />;
-    return <Building2Icon className={className} />;
-}
-
-type Props = { tickets: any[]; buildings: any[]; categories: any[] };
+type Props = { tickets: { data: any[]; current_page: number; last_page: number; per_page: number; total: number }; buildings: any[] };
 type Option = [string | number, string];
 type TicketPhotoPreview = { name: string; url: string } | null;
 
-export default function Tickets({ tickets, buildings, categories }: Props) {
+export default function Tickets({ tickets, buildings }: Props) {
+    useOrganizationRealtime('tickets.changed', ['tickets']);
     const user = usePage().props.auth.user as { name: string; username?: string };
-    const form = useForm({ building_id: '', unit_id: '', issue_category_id: '', description: '', damage_photo: null as File | null });
+    const form = useForm({ building_id: '', unit_id: '', issue_category_name: '', description: '', damage_photo: null as File | null });
     const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
     const showError = (title: string, message: string) => setErrorModal({ title, message });
 
@@ -54,10 +44,10 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
     const units = buildings.find((building) => String(building.id) === form.data.building_id)?.units ?? [];
 
     const counts = {
-        total: tickets.length,
-        waiting: tickets.filter((ticket) => ticket.status === 'MENUNGGU_DISPATCH').length,
-        active: tickets.filter((ticket) => ['DITUGASKAN', 'DALAM_PENGERJAAN'].includes(ticket.status)).length,
-        done: tickets.filter((ticket) => ticket.status === 'SELESAI').length
+        total: tickets.total,
+        waiting: tickets.data.filter((ticket) => ticket.status === 'MENUNGGU_DISPATCH').length,
+        active: tickets.data.filter((ticket) => ['DITUGASKAN', 'DALAM_PENGERJAAN'].includes(ticket.status)).length,
+        done: tickets.data.filter((ticket) => ticket.status === 'SELESAI').length
     };
 
     const preview: TicketPhotoPreview = form.data.damage_photo ? { name: form.data.damage_photo.name, url: URL.createObjectURL(form.data.damage_photo) } : null;
@@ -92,8 +82,8 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                 ))}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card id="buat-laporan" className="col-span-4">
+            <section id="buat-laporan">
+                <Card>
                     <CardHeader>
                         <CardTitle>Lapor Kerusakan Baru</CardTitle>
                         <CardDescription>Lengkapi informasi agar teknisi dapat menangani masalah dengan tepat.</CardDescription>
@@ -115,17 +105,9 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Kategori Masalah</label>
-                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                    {categories.map((category) => (
-                                        <button type="button" key={category.id} onClick={() => form.setData('issue_category_id', String(category.id))}
-                                            className={`inline-flex flex-col items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 border h-20 gap-2 ${form.data.issue_category_id === String(category.id) ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-900/90' : 'border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900 text-slate-950'}`}>
-                                            <CategoryIcon name={category.name} className="h-5 w-5" />
-                                            {category.name}
-                                        </button>
-                                    ))}
-                                </div>
-                                {form.errors.issue_category_id && <p className="text-[0.8rem] font-medium text-red-500">{form.errors.issue_category_id}</p>}
+                                <Label htmlFor="issue-category">Jenis Masalah</Label>
+                                <input id="issue-category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.data.issue_category_name} onChange={(event) => form.setData('issue_category_name', event.target.value)} placeholder="Contoh: Pipa bocor, lampu mati, atau kunci pintu rusak" maxLength={120} required />
+                                {form.errors.issue_category_name && <p className="text-[0.8rem] font-medium text-red-500">{form.errors.issue_category_name}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -158,32 +140,39 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                         </form>
                     </CardContent>
                 </Card>
+            </section>
 
-                <Card className="col-span-3 flex flex-col">
+            <section aria-labelledby="riwayat-laporan">
+                <div className="mb-4">
+                    <h2 id="riwayat-laporan" className="text-xl font-semibold tracking-tight">Riwayat Laporan</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">Pantau status dan detail laporan yang pernah Anda kirim.</p>
+                </div>
+                <Card className="flex flex-col">
                     <CardHeader className="border-b border-slate-100">
-                        <CardTitle>Riwayat Laporan</CardTitle>
-                        <CardDescription>Laporan terbaru Anda.</CardDescription>
+                        <CardTitle>Laporan Terbaru</CardTitle>
+                        <CardDescription>Riwayat laporan Anda, dari yang paling baru.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 flex-1 overflow-y-auto max-h-[600px]">
                         <div className="divide-y divide-slate-100">
-                            {tickets.map((ticket) => (
+                            {tickets.data.map((ticket) => (
                                 <div key={ticket.id} className="p-4 hover:bg-slate-50 transition-colors">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                             <span className="font-mono text-xs font-semibold text-slate-500">#{ticket.id}</span>
                                             <span className="text-xs text-slate-400">•</span>
-                                            <span className="text-xs font-medium text-slate-600">{ticket.issue_category.name}</span>
+                                            <span className="text-xs font-medium text-slate-600">{ticket.custom_issue_category ?? ticket.issue_category.name}</span>
                                         </div>
                                         <Status status={ticket.status} />
                                     </div>
                                     <p className="text-sm font-medium leading-none mb-1.5">{ticket.building.name} - Unit {ticket.unit.number}</p>
-                                    <p className="text-sm text-slate-500 line-clamp-2">{ticket.description}</p>
+                                     <p className="text-sm text-slate-500 line-clamp-2">{ticket.description}</p>
+                                    {ticket.status === 'DIBATALKAN' && ticket.cancellation_reason && <p className="mt-2 rounded-md bg-slate-100 p-2 text-xs text-slate-700"><span className="font-semibold">Alasan pembatalan: </span>{ticket.cancellation_reason}</p>}
                                     <p className="text-xs text-slate-400 mt-2">
                                         {new Date(ticket.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                     </p>
                                 </div>
                             ))}
-                            {tickets.length === 0 && (
+                            {tickets.data.length === 0 && (
                                 <div className="p-8 text-center flex flex-col items-center">
                                     <FileTextIcon className="h-8 w-8 text-slate-300 mb-3" />
                                     <p className="text-sm font-medium text-slate-900">Belum ada riwayat laporan.</p>
@@ -191,8 +180,9 @@ export default function Tickets({ tickets, buildings, categories }: Props) {
                             )}
                         </div>
                     </CardContent>
+                    {tickets.data.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm"><span className="text-muted-foreground">{tickets.total} laporan</span><div className="flex items-center gap-2"><select aria-label="Jumlah laporan per halaman" className="h-9 rounded-md border bg-background px-2" value={tickets.per_page} onChange={(event) => window.location.assign(route('resident.tickets.index', { per_page: event.target.value }))}>{[5, 10, 25].map((size) => <option key={size} value={size}>{size} / halaman</option>)}</select>{tickets.last_page > 1 && <><Button asChild variant="outline" size="sm" disabled={tickets.current_page === 1}><Link href={route('resident.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page })}>Sebelumnya</Link></Button><Button asChild variant="outline" size="sm" disabled={tickets.current_page === tickets.last_page}><Link href={route('resident.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page })}>Berikutnya</Link></Button></>}</div></div>}
                 </Card>
-            </div>
+            </section>
 
             <Modal show={!!errorModal} maxWidth="md" onClose={() => setErrorModal(null)}>
                 <div className="p-6">
