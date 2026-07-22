@@ -11,12 +11,48 @@ import {
     NavbarLogo,
     NavItems,
 } from '@/Components/ui/resizable-navbar';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ShapeGrid from '@/Components/ShapeGrid';
 
 const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
 const StarIcon = ({ className = 'h-4 w-4 fill-current' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className}><path d="m12 2.25 2.83 6.06 6.67.52-5.1 4.36 1.57 6.48L12 16.36 6.03 19.67l1.57-6.48-5.1-4.36 6.67-.52L12 2.25Z" /></svg>;
 const ArrowRightIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4.5 12h15m0 0-6.75-6.75M19.5 12l-6.75 6.75" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+
+function AnimatedStats({ stats }: { stats: { value: string; label: string }[] }) {
+    const sectionRef = useRef<HTMLElement>(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const section = sectionRef.current;
+        if (!section || !('IntersectionObserver' in window)) {
+            setVisible(true);
+            return;
+        }
+
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setVisible(true);
+                observer.disconnect();
+            }
+        }, { threshold: 0.2 });
+
+        observer.observe(section);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <section ref={sectionRef} id="workflow" className="border-y border-violet-100 bg-violet-50 py-12">
+            <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+                {stats.map(({ value, label }, index) => (
+                    <div key={label} className={`transition duration-700 motion-reduce:transition-none ${visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionDelay: `${index * 80}ms` }}>
+                        <p className="text-4xl font-extrabold text-slate-900 mb-1">{value}</p>
+                        <p className="text-slate-600 text-sm">{label}</p>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+}
 
 export default function Welcome({ auth }: PageProps<{ laravelVersion: string; phpVersion: string }>) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -46,7 +82,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
             <Head title="FixIn" />
             <div className="min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
                 <Navbar className="fixed top-0">
-                    <NavBody>
+                    <NavBody className="!bg-transparent !shadow-none">
                         <NavbarLogo />
                         <NavItems items={navItems} />
                         <div className="flex items-center gap-3">
@@ -56,7 +92,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                             </>}
                         </div>
                     </NavBody>
-                    <MobileNav>
+                    <MobileNav className="!bg-transparent !shadow-none">
                         <MobileNavHeader>
                             <NavbarLogo />
                             <MobileNavToggle isOpen={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
@@ -81,10 +117,10 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                             hoverFillColor="rgba(124, 58, 237, 0.32)"
                             shape="square"
                             hoverTrailAmount={5}
-                            className="opacity-80"
+                            className="opacity-55"
                         />
                     </div>
-                    <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-16 items-center w-full">
+                    <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-16 items-center w-full">
                         <div>
                             <div className="inline-flex items-center gap-2 bg-violet-100 border border-violet-200 rounded-full px-4 py-1.5 text-xs font-semibold text-violet-700 mb-6">
                                 <WrenchIcon className="h-3 w-3" /> Platform Operasional Gedung
@@ -96,14 +132,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                                 FixIn mengontrol siklus maintenance fasilitas dari laporan penghuni hingga selesai, tanpa grup chat yang berantakan.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
-                                {auth.user ? (
-                                    <Link href={route('dashboard')} className="flex items-center justify-center gap-2 bg-violet-700 text-white font-semibold px-8 py-4 rounded-xl hover:bg-violet-800 transition-colors text-base">Buka Dashboard <ArrowRightIcon className="h-5 w-5" /></Link>
-                                ) : (
-                                    <>
-                                        <Link href={route('register')} className="flex items-center justify-center gap-2 bg-violet-700 text-white font-semibold px-8 py-4 rounded-xl hover:bg-violet-800 transition-colors text-base">Daftar Gratis <ArrowRightIcon className="h-5 w-5" /></Link>
-                                        <Link href={route('login')} className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold px-8 py-4 rounded-xl transition-colors text-base">Masuk</Link>
-                                    </>
-                                )}
+                                <Link href={route('dashboard')} className="flex items-center justify-center gap-2 bg-violet-700 text-white font-semibold px-8 py-4 rounded-xl hover:bg-violet-800 transition-colors text-base">Lapor Sekarang <ArrowRightIcon className="h-5 w-5" /></Link>
                             </div>
                             <div className="flex items-center gap-4 mt-10 pt-8 border-t border-slate-200">
                                 <div className="text-sm">
@@ -119,7 +148,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                         </div>
 
                         <div className="hidden lg:block">
-                            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                            <div className="bg-white/95 border border-slate-200 rounded-2xl p-6 shadow-xl shadow-slate-900/10">
                                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                                     <div><p className="text-slate-900 font-bold text-sm">Alur Dispatch</p><p className="text-slate-500 text-xs mt-0.5">Visibilitas real-time</p></div>
                                     <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold"><StarIcon className="h-4 w-4" />Standar SLA</div>
@@ -144,11 +173,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                     </div>
                 </section>
 
-                <section id="workflow" className="bg-slate-900 py-12 border-t border-slate-800">
-                    <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-                        {stats.map(({ value, label }) => <div key={label}><p className="text-4xl font-extrabold text-white mb-1">{value}</p><p className="text-slate-400 text-sm">{label}</p></div>)}
-                    </div>
-                </section>
+                <AnimatedStats stats={stats} />
 
                 <section id="features" className="py-24 bg-slate-50">
                     <div className="max-w-7xl mx-auto px-6">
