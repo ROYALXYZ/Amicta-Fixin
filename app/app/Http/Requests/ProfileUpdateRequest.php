@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Support\PhoneNumber;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,14 +19,17 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
+            'phone_number' => [
                 'required',
                 'string',
-                'lowercase',
-                'email',
-                'max:255',
+                'max:30',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['phone_number' => PhoneNumber::normalize((string) $this->input('phone_number'))]);
     }
 }

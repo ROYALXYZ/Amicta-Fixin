@@ -46,7 +46,11 @@ class TechnicianTicketController extends Controller
         abort_unless($ticket->organization_id === $o->id && $ticket->technician_id === $r->user()->id && $ticket->status === TicketStatus::Assigned, 403);
         $ticket->update(['status' => TicketStatus::InProgress]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::Assigned, 'new_status' => TicketStatus::InProgress, 'changed_by' => $r->user()->id]);
-        OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        try {
+            OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return back();
     }
@@ -57,7 +61,11 @@ class TechnicianTicketController extends Controller
         abort_unless($ticket->organization_id === $o->id && $ticket->technician_id === $r->user()->id && $ticket->status === TicketStatus::InProgress, 403);
         $d = $r->validate(['body' => 'required|string|max:2000']);
         TicketWorkNote::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'technician_id' => $r->user()->id, 'body' => $d['body']]);
-        OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        try {
+            OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return back();
     }
@@ -89,7 +97,11 @@ class TechnicianTicketController extends Controller
         TicketPhoto::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'type' => 'PENYELESAIAN', 'storage_path' => $p, 'mime_type' => $f->getMimeType(), 'size_bytes' => $f->getSize(), 'uploaded_by' => $r->user()->id]);
         $ticket->update(['status' => TicketStatus::Completed]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::InProgress, 'new_status' => TicketStatus::Completed, 'changed_by' => $r->user()->id]);
-        OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        try {
+            OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return back();
     }

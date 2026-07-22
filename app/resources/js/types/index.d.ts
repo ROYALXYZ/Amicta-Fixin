@@ -2,6 +2,7 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    phone_number: string;
     email_verified_at?: string;
     role: 'PLATFORM_OWNER' | 'ADMIN' | 'RESIDENT' | 'TECHNICIAN';
 }

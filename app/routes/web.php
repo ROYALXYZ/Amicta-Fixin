@@ -51,6 +51,10 @@ Route::middleware(['auth', 'tenant.user', 'role:ADMIN'])->prefix('admin')->name(
     Route::get('/technicians', [AdminTechnicianController::class, 'index'])->name('technicians.index');
     Route::post('/buildings', [AdminTicketController::class, 'building'])->name('buildings.store');
     Route::post('/units', [AdminTicketController::class, 'unit'])->name('units.store');
+    Route::patch('/buildings/{building}', [AdminTicketController::class, 'updateBuilding'])->name('buildings.update');
+    Route::patch('/buildings/{building}/toggle', [AdminTicketController::class, 'toggleBuilding'])->name('buildings.toggle');
+    Route::patch('/units/{unit}', [AdminTicketController::class, 'updateUnit'])->name('units.update');
+    Route::patch('/units/{unit}/toggle', [AdminTicketController::class, 'toggleUnit'])->name('units.toggle');
     Route::post('/technicians', [AdminTechnicianController::class, 'store'])->name('technicians.store');
     Route::patch('/technicians/{technician}', [AdminTechnicianController::class, 'update'])->name('technicians.update');
     Route::patch('/technicians/{technician}/toggle', [AdminTechnicianController::class, 'toggle'])->name('technicians.toggle');

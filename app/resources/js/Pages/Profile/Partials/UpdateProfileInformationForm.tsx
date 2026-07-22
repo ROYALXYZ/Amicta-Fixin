@@ -20,7 +20,7 @@ export default function UpdateProfileInformation({
     const { data, setData, patch, errors, processing, recentlySuccessful } =
         useForm({
             name: user.name,
-            email: user.email,
+            phone_number: user.phone_number,
         });
 
     const submit: FormEventHandler = (e) => {
@@ -37,7 +37,7 @@ export default function UpdateProfileInformation({
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    Update your account's profile information and email address.
+                    Perbarui nama dan nomor HP akun Anda.
                 </p>
             </header>
 
@@ -59,19 +59,19 @@ export default function UpdateProfileInformation({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
+                    <InputLabel htmlFor="phone_number" value="Nomor HP" />
 
                     <TextInput
-                        id="email"
-                        type="email"
+                        id="phone_number"
+                        type="tel"
                         className="mt-1 block w-full"
-                        value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
+                        value={data.phone_number}
+                        onChange={(e) => setData('phone_number', e.target.value)}
                         required
-                        autoComplete="username"
+                        autoComplete="tel"
                     />
 
-                    <InputError className="mt-2" message={errors.email} />
+                    <InputError className="mt-2" message={errors.phone_number} />
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (

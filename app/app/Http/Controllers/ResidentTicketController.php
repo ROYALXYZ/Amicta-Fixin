@@ -85,7 +85,11 @@ class ResidentTicketController extends Controller
 
         Cache::forget("admin:{$org->id}:tickets:1");
         Cache::forget("admin:{$org->id}:ticket-status-counts");
-        OrganizationTicketsChanged::dispatch($org->id, 'created');
+        try {
+            OrganizationTicketsChanged::dispatch($org->id, 'created');
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return back();
     }

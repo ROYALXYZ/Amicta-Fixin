@@ -1,6 +1,7 @@
-import { Link, usePage } from '@inertiajs/react';
-import { Building2, FileText, LayoutDashboard, LogOut, User, UsersRound, Wrench } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Building2, FileText, LayoutDashboard, LogOut, RefreshCw, User, UsersRound, Wrench } from 'lucide-react';
 import { PropsWithChildren, ReactNode } from 'react';
+import { useState } from 'react';
 import {
     Sidebar,
     SidebarContent,
@@ -22,6 +23,7 @@ type LayoutUser = { name: string; role: string; phone_number?: string; username?
 export default function AuthenticatedLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user as LayoutUser;
     const currentRoute = route().current();
+    const [refreshing, setRefreshing] = useState(false);
     const navItems = (() => {
         if (user.role === 'PLATFORM_OWNER') return [{ name: 'platform.organizations.index', label: 'Organisasi', icon: Building2 }];
         if (user.role === 'ADMIN') return [
@@ -94,7 +96,20 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
             <SidebarInset>
                 <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b bg-background px-4 sm:px-6">
                     <SidebarTrigger aria-label="Buka atau tutup navigasi" />
-                    {header && <div className="text-base font-semibold">{header}</div>}
+                    {header && <div className="min-w-0 flex-1 text-base font-semibold">{header}</div>}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setRefreshing(true);
+                            router.reload({ onFinish: () => setRefreshing(false) });
+                        }}
+                        disabled={refreshing}
+                        className="inline-flex size-9 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label="Refresh data"
+                        title="Refresh data"
+                    >
+                        <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+                    </button>
                 </header>
                 <main className="min-w-0 flex-1">{children}</main>
             </SidebarInset>
