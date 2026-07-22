@@ -116,33 +116,68 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
 
 export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [activeSection, setActiveSection] = useState<string>("");
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      let current = "";
+      let maxTop = -Infinity;
+      
+      for (const item of items) {
+        if (!item.link.startsWith("#")) continue;
+        const id = item.link.substring(1);
+        const element = document.getElementById(id);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          // Cari elemen yang sudah melewati batas atas (top <= 300)
+          // dan posisinya paling dekat dengan batas tersebut (nilai top terbesar)
+          if (rect.top <= 300 && rect.top > maxTop) {
+            maxTop = rect.top;
+            current = item.link;
+          }
+        }
+      }
+      setActiveSection(current);
+    };
+    
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [items]);
 
   return (
     <motionAny.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
+        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium transition duration-200 lg:flex lg:space-x-2",
         className,
       )}
     >
-      {items.map((item, idx) => (
-        <a
-          onMouseEnter={() => setHovered(idx)}
-          onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
-          key={`link-${idx}`}
-          href={item.link}
-        >
-          {hovered === idx && (
-            <motionAny.div
-              layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
-            />
-          )}
-          <span className="relative z-20">{item.name}</span>
-        </a>
-      ))}
-            </motionAny.div>
+      {items.map((item, idx) => {
+        const isActive = activeSection === item.link;
+        return (
+          <a
+            onMouseEnter={() => setHovered(idx)}
+            onClick={onItemClick}
+            className={cn(
+              "relative px-4 py-2 transition-colors",
+              isActive ? "text-violet-700 font-bold" : "text-neutral-600 hover:text-zinc-800 dark:text-neutral-300"
+            )}
+            key={`link-${idx}`}
+            href={item.link}
+          >
+            {hovered === idx && (
+              <motionAny.div
+                layoutId="hovered"
+                className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
+              />
+            )}
+            <span className="relative z-20">{item.name}</span>
+          </a>
+        );
+      })}
+    </motionAny.div>
   );
 };
 
