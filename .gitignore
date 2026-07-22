@@ -56,8 +56,10 @@ frontend.zip
 
 # Prototype and workspace-only files; production application lives in app/
 frontend/
-package.json
-package-lock.json
+/**/package.json
+/**/package-lock.json
+!/app/package.json
+!/app/package-lock.json
 skills-lock.json
 opencode.json
 

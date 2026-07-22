@@ -87,6 +87,42 @@ class AdminTicketController extends Controller
         return back();
     }
 
+    public function updateBuilding(Request $r, Building $building)
+    {
+        $o = TenantContext::organization($r);
+        abort_unless($building->organization_id === $o->id, 404);
+        $building->update($r->validate(['name' => 'required|string|max:120']));
+        return back();
+    }
+
+    public function toggleBuilding(Request $r, Building $building)
+    {
+        $o = TenantContext::organization($r);
+        abort_unless($building->organization_id === $o->id, 404);
+        $active = ! $building->is_active;
+        $building->update(['is_active' => $active]);
+        if (! $active) $building->units()->update(['is_active' => false]);
+        return back();
+    }
+
+    public function updateUnit(Request $r, Unit $unit)
+    {
+        $o = TenantContext::organization($r);
+        abort_unless($unit->organization_id === $o->id, 404);
+        $d = $r->validate(['name' => 'required|string|max:50']);
+        abort_if(Unit::where('organization_id', $o->id)->where('building_id', $unit->building_id)->where('number', $d['name'])->where('id', '!=', $unit->id)->exists(), 422, 'Unit sudah ada di gedung/area ini.');
+        $unit->update(['number' => $d['name']]);
+        return back();
+    }
+
+    public function toggleUnit(Request $r, Unit $unit)
+    {
+        $o = TenantContext::organization($r);
+        abort_unless($unit->organization_id === $o->id, 404);
+        $unit->update(['is_active' => ! $unit->is_active]);
+        return back();
+    }
+
     public function technician(Request $r)
     {
         $o = TenantContext::organization($r);
@@ -108,7 +144,11 @@ class AdminTicketController extends Controller
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
 
         $this->forgetTicketCache($o->id);
-        OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        try {
+            OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
         return back();
     }
 
@@ -122,7 +162,11 @@ class AdminTicketController extends Controller
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => $old, 'new_status' => TicketStatus::Cancelled, 'changed_by' => $r->user()->id, 'note' => $d['reason']]);
 
         $this->forgetTicketCache($o->id);
-        OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        try {
+            OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
         return back();
     }
 

@@ -30,7 +30,7 @@ export default function Tickets({ tickets, buildings }: Props) {
     const selectPhoto = (file: File | null) => {
         if (!file) return;
         if (!['image/jpeg', 'image/webp'].includes(file.type)) {
-            showError('Format Foto Salah', 'Hanya file JPEG dan WebP yang diizinkan. Silakan pilih foto dengan format yang benar.');
+            showError('Format Foto Salah', 'Gunakan foto JPEG atau WebP. Foto HEIC/HEIF/PNG perlu dikonversi atau screenshot terlebih dahulu.');
             return;
         }
         if (file.size > 2 * 1024 * 1024) {
@@ -101,7 +101,7 @@ export default function Tickets({ tickets, buildings }: Props) {
                         }}>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <Select label="Gedung / Area" value={form.data.building_id} onChange={(value: string) => { form.setData('building_id', value); form.setData('unit_id', ''); }} options={buildings.map((building): Option => [building.id, building.name])} />
-                                <Select label="Unit" value={form.data.unit_id} onChange={(value: string) => form.setData('unit_id', value)} options={units.map((unit: any): Option => [unit.id, unit.number])} disabled={!form.data.building_id} />
+                                <Select label="Unit" value={form.data.unit_id} onChange={(value: string) => form.setData('unit_id', value)} options={units.filter((unit: any) => unit.is_active).map((unit: any): Option => [unit.id, unit.number])} disabled={!form.data.building_id} />
                             </div>
 
                             <div className="space-y-2">
@@ -180,7 +180,7 @@ export default function Tickets({ tickets, buildings }: Props) {
                             )}
                         </div>
                     </CardContent>
-                    {tickets.data.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm"><span className="text-muted-foreground">{tickets.total} laporan</span><div className="flex items-center gap-2"><select aria-label="Jumlah laporan per halaman" className="h-9 rounded-md border bg-background px-2" value={tickets.per_page} onChange={(event) => window.location.assign(route('resident.tickets.index', { per_page: event.target.value }))}>{[5, 10, 25].map((size) => <option key={size} value={size}>{size} / halaman</option>)}</select>{tickets.last_page > 1 && <><Button asChild variant="outline" size="sm" disabled={tickets.current_page === 1}><Link href={route('resident.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page })}>Sebelumnya</Link></Button><Button asChild variant="outline" size="sm" disabled={tickets.current_page === tickets.last_page}><Link href={route('resident.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page })}>Berikutnya</Link></Button></>}</div></div>}
+                    {tickets.data.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm"><span className="text-muted-foreground">{tickets.total} laporan</span><div className="flex items-center gap-1.5"><span className="mr-1 text-xs text-muted-foreground">Tampilkan</span>{[5, 10, 15, 20].map((size) => <Link key={size} href={route('resident.tickets.index', { per_page: size })} className={`inline-flex size-8 items-center justify-center rounded-md border text-xs font-medium ${tickets.per_page === size ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>{size}</Link>)}{tickets.last_page > 1 && <><Button asChild variant="outline" size="icon" className="ml-1 size-8" disabled={tickets.current_page === 1}><Link aria-label="Halaman sebelumnya" href={route('resident.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page })}>←</Link></Button><Button asChild variant="outline" size="icon" className="size-8" disabled={tickets.current_page === tickets.last_page}><Link aria-label="Halaman berikutnya" href={route('resident.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page })}>→</Link></Button></>}</div></div>}
                 </Card>
             </section>
 
