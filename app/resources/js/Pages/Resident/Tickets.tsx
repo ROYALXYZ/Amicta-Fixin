@@ -7,6 +7,7 @@ import { Button } from "@/Components/ui/button";
 import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
+import { toast } from 'sonner';
 
 const FileTextIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ClockIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -92,8 +93,9 @@ export default function Tickets({ tickets, buildings }: Props) {
                         <form className="space-y-4" onSubmit={(event) => {
                             event.preventDefault();
                             form.post(route('resident.tickets.store'), {
-                                onSuccess: () => form.reset(),
+                                onSuccess: () => { form.reset(); toast.success('Laporan berhasil dikirim.'); },
                                 onError: (errors) => {
+                                    toast.error('Laporan gagal dikirim. Periksa data lalu coba lagi.');
                                     const firstError = Object.values(errors)[0];
                                     if (firstError) showError('Pengiriman Gagal', firstError as string);
                                 }

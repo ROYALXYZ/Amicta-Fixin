@@ -31,7 +31,7 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
             { name: 'admin.locations.index', label: 'Gedung & Unit', icon: Building2 },
             { name: 'admin.technicians.index', label: 'Manajemen Tukang', icon: UsersRound },
         ];
-        if (user.role === 'TECHNICIAN') return [{ name: 'technician.tickets.index', label: 'Work Order', icon: Wrench }];
+        if (user.role === 'TECHNICIAN') return [{ name: 'technician.tickets.index', label: 'Pekerjaan Teknisi', icon: Wrench }];
         return [
             { name: 'resident.dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { name: 'resident.tickets.index', label: 'Laporan Saya', icon: FileText },
@@ -40,8 +40,8 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
     const displayRole = user.role.replace('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 
     return (
-        <SidebarProvider>
-            <Sidebar collapsible="offcanvas">
+        <SidebarProvider defaultOpen={false}>
+            <Sidebar collapsible="icon">
                 <SidebarHeader>
                     <div className="flex items-center gap-3 px-2 py-2">
                         <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">

@@ -14,6 +14,7 @@ use App\Support\PhoneNumber;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -24,17 +25,39 @@ class AdminTicketController extends Controller
     {
         $org = TenantContext::organization($request);
 
-        $perPage = in_array($request->integer('per_page'), [5, 10, 25], true) ? $request->integer('per_page') : 5;
-        $tickets = Ticket::where('organization_id', $org->id)
+        $perPage = in_array($request->integer('per_page'), [5, 10, 15, 20], true) ? $request->integer('per_page') : 5;
+        $status = $request->string('status')->toString();
+        $query = trim($request->string('query')->toString());
+        $urgent = $request->boolean('urgent');
+        $filteredQuery = $this->filteredTicketsQuery($org->id, $status, $query, $urgent);
+        $tickets = (clone $filteredQuery)
             ->with(['building:id,name', 'unit:id,number', 'reporter:id,name', 'technician:id,name', 'issueCategory:id,name'])
             ->latest()->paginate($perPage)->withQueryString()->through(fn (Ticket $ticket) => [
                 'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory, 'custom_issue_category' => $ticket->custom_issue_category,
-                'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter,
-                'technician' => $ticket->technician, 'submitted_at' => $ticket->created_at?->toIso8601String(),
+                'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter, 'reporter_name' => $ticket->reporter_name, 'reporter_phone' => $ticket->reporter_phone,
+                'technician' => $ticket->technician, 'priority' => $ticket->priority?->value, 'is_urgent' => $ticket->reporter_id === null, 'submitted_at' => $ticket->created_at?->toIso8601String(),
             ]);
-        $statusCounts = Cache::remember("admin:{$org->id}:ticket-status-counts", now()->addMinute(), fn () => Ticket::where('organization_id', $org->id)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'));
+        $statusCounts = (clone $filteredQuery)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $urgentCount = Ticket::where('organization_id', $org->id)->whereNull('reporter_id')->count();
 
-        return Inertia::render('Admin/Tickets', ['tickets' => $tickets, 'statusCounts' => $statusCounts, 'technicians' => Cache::remember("admin:{$org->id}:active-technicians", now()->addMinute(), fn () => User::where('organization_id', $org->id)->where('role', UserRole::Technician)->where('is_active', true)->get(['id', 'name']))]);
+        return Inertia::render('Admin/Tickets', ['tickets' => $tickets, 'statusCounts' => $statusCounts, 'urgentCount' => $urgentCount, 'technicians' => Cache::remember("admin:{$org->id}:active-technicians", now()->addMinute(), fn () => User::where('organization_id', $org->id)->where('role', UserRole::Technician)->where('is_active', true)->get(['id', 'name']))]);
+    }
+
+    private function filteredTicketsQuery(int $organizationId, string $status, string $query, bool $urgent)
+    {
+        return Ticket::where('organization_id', $organizationId)
+            ->when(in_array($status, array_column(TicketStatus::cases(), 'value'), true), fn ($builder) => $builder->where('status', $status))
+            ->when($urgent, fn ($builder) => $builder->whereNull('reporter_id'))
+            ->when($query !== '', fn ($builder) => $builder->where(function ($builder) use ($query) {
+                $builder->where('id', 'like', "%{$query}%")
+                    ->orWhere('description', 'like', "%{$query}%")
+                    ->orWhere('reporter_name', 'like', "%{$query}%")
+                    ->orWhere('reporter_phone', 'like', "%{$query}%")
+                    ->orWhereHas('building', fn ($building) => $building->where('name', 'like', "%{$query}%"))
+                    ->orWhereHas('unit', fn ($unit) => $unit->where('number', 'like', "%{$query}%"))
+                    ->orWhereHas('issueCategory', fn ($category) => $category->where('name', 'like', "%{$query}%"))
+                    ->orWhereHas('technician', fn ($technician) => $technician->where('name', 'like', "%{$query}%"));
+            }));
     }
 
     public function show(Request $request, Ticket $ticket)
@@ -46,8 +69,8 @@ class AdminTicketController extends Controller
 
         return response()->json([
             'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory, 'custom_issue_category' => $ticket->custom_issue_category,
-            'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter, 'technician' => $ticket->technician,
-            'description' => $ticket->description, 'priority' => $ticket->priority?->value,
+            'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter, 'reporter_name' => $ticket->reporter_name, 'reporter_phone' => $ticket->reporter_phone, 'technician' => $ticket->technician,
+            'description' => $ticket->description, 'priority' => $ticket->priority?->value, 'is_urgent' => $ticket->reporter_id === null,
             'submitted_at' => $ticket->created_at?->toIso8601String(), 'assigned_at' => $history(TicketStatus::Assigned)?->created_at?->toIso8601String(),
             'started_at' => $history(TicketStatus::InProgress)?->created_at?->toIso8601String(), 'completed_at' => $history(TicketStatus::Completed)?->created_at?->toIso8601String(),
             'photo_urls' => $ticket->photos->map(fn ($photo) => ['type' => $photo->type->value, 'mime_type' => $photo->mime_type, 'created_at' => $photo->created_at?->toIso8601String(), 'url' => Storage::disk('supabase')->temporaryUrl($photo->storage_path, now()->addMinutes(10))]),
@@ -167,6 +190,44 @@ class AdminTicketController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
         }
+        return back();
+    }
+
+    public function bulkDispatch(Request $r)
+    {
+        $o = TenantContext::organization($r);
+        $d = $r->validate(['ticket_ids' => 'required|array|min:1', 'ticket_ids.*' => 'integer', 'technician_id' => 'required|integer', 'priority' => 'required|in:TINGGI,SEDANG,RENDAH']);
+        $technician = User::where('organization_id', $o->id)->where('role', UserRole::Technician)->where('is_active', true)->findOrFail($d['technician_id']);
+        $tickets = Ticket::where('organization_id', $o->id)->whereIn('id', $d['ticket_ids'])->lockForUpdate()->get();
+        abort_if($tickets->count() !== count(array_unique($d['ticket_ids'])), 422, 'Sebagian tiket tidak ditemukan.');
+        abort_if($tickets->contains(fn (Ticket $ticket) => $ticket->status !== TicketStatus::WaitingDispatch), 422, 'Semua tiket harus berstatus menunggu dispatch.');
+        DB::transaction(function () use ($tickets, $technician, $d, $o, $r) {
+            foreach ($tickets as $ticket) {
+                $ticket->update(['technician_id' => $technician->id, 'priority' => $d['priority'], 'status' => TicketStatus::Assigned]);
+                TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
+            }
+        });
+        $this->forgetTicketCache($o->id);
+        OrganizationTicketsChanged::dispatch($o->id, 'updated');
+        return back();
+    }
+
+    public function bulkCancel(Request $r)
+    {
+        $o = TenantContext::organization($r);
+        $d = $r->validate(['ticket_ids' => 'required|array|min:1', 'ticket_ids.*' => 'integer', 'reason' => 'required|string|max:2000']);
+        $tickets = Ticket::where('organization_id', $o->id)->whereIn('id', $d['ticket_ids'])->lockForUpdate()->get();
+        abort_if($tickets->count() !== count(array_unique($d['ticket_ids'])), 422, 'Sebagian tiket tidak ditemukan.');
+        abort_if($tickets->contains(fn (Ticket $ticket) => in_array($ticket->status, [TicketStatus::Completed, TicketStatus::Cancelled], true)), 422, 'Tiket selesai atau dibatalkan tidak dapat dibatalkan lagi.');
+        DB::transaction(function () use ($tickets, $d, $o, $r) {
+            foreach ($tickets as $ticket) {
+                $old = $ticket->status;
+                $ticket->update(['status' => TicketStatus::Cancelled, 'cancellation_reason' => $d['reason'], 'cancelled_by' => $r->user()->id, 'cancelled_at' => now()]);
+                TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => $old, 'new_status' => TicketStatus::Cancelled, 'changed_by' => $r->user()->id, 'note' => $d['reason']]);
+            }
+        });
+        $this->forgetTicketCache($o->id);
+        OrganizationTicketsChanged::dispatch($o->id, 'updated');
         return back();
     }
 

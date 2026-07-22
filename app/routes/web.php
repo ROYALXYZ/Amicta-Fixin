@@ -6,6 +6,7 @@ use App\Http\Controllers\PlatformOrganizationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResidentTicketController;
 use App\Http\Controllers\TechnicianTicketController;
+use App\Http\Controllers\UrgentTicketController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -24,6 +25,9 @@ Route::get('/dashboard', function () {
         'RESIDENT' => 'resident.dashboard', 'ADMIN' => 'admin.tickets.index', 'TECHNICIAN' => 'technician.tickets.index', default => 'platform.organizations.index',
     });
 })->middleware(['auth', 'verified', 'tenant.user'])->name('dashboard');
+
+Route::get('/urgent', [UrgentTicketController::class, 'create'])->name('urgent.create');
+Route::post('/urgent', [UrgentTicketController::class, 'store'])->name('urgent.store');
 
 Route::middleware(['auth', 'tenant.user'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -46,6 +50,8 @@ Route::middleware(['auth', 'tenant.user', 'role:TECHNICIAN'])->prefix('technicia
 
 Route::middleware(['auth', 'tenant.user', 'role:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
+    Route::post('/tickets/bulk-dispatch', [AdminTicketController::class, 'bulkDispatch'])->name('tickets.bulk-dispatch');
+    Route::post('/tickets/bulk-cancel', [AdminTicketController::class, 'bulkCancel'])->name('tickets.bulk-cancel');
     Route::get('/locations', [AdminTicketController::class, 'locations'])->name('locations.index');
     Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show');
     Route::get('/technicians', [AdminTechnicianController::class, 'index'])->name('technicians.index');

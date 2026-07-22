@@ -159,7 +159,17 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         return (
           <a
             onMouseEnter={() => setHovered(idx)}
-            onClick={onItemClick}
+            onClick={(event) => {
+              if (item.link.startsWith("#")) {
+                const target = document.getElementById(item.link.slice(1));
+                if (target) {
+                  event.preventDefault();
+                  target.scrollIntoView({ behavior: "smooth", block: "start" });
+                  window.history.pushState(null, "", item.link);
+                }
+              }
+              onItemClick?.();
+            }}
             className={cn(
               "relative px-4 py-2 transition-colors",
               isActive ? "text-violet-700 font-bold" : "text-neutral-600 hover:text-zinc-800 dark:text-neutral-300"

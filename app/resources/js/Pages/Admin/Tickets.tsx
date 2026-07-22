@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -29,6 +29,7 @@ import {
 } from '@/Components/ui/select';
 import { Label } from '@/Components/ui/label';
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
+import { toast } from 'sonner';
 
 const FileTextIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ClockIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -48,37 +49,66 @@ function CategoryIcon({ name, className }: { name: string; className?: string })
     return <Building2Icon className={className || 'text-stone-500'} />;
 }
 
+function formatTicketAge(iso: string | null) {
+    if (!iso) return '-';
+    const hours = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000));
+    if (hours < 1) return 'Baru saja';
+    if (hours < 24) return `${hours} jam lalu`;
+    const days = Math.floor(hours / 24);
+    return days === 1 ? 'Kemarin' : `${days} hari lalu`;
+}
+
 type TicketPhoto = { type: string; mime_type: string; url: string; created_at: string | null };
 type WorkNote = { body: string; created_at: string | null };
 type TicketRowType = {
-    id: number; status: string; issue_category: { name: string }; custom_issue_category: string | null;
-    building: { name: string }; unit: { number: string }; reporter: { name: string; phone_number: string };
+    id: number; status: string; issue_category: { name: string }; custom_issue_category: string | null; is_urgent: boolean;
+    building: { name: string }; unit: { number: string }; reporter: { name: string; phone_number: string } | null; reporter_name: string | null; reporter_phone: string | null;
     technician: { name: string } | null; description: string; priority: string | null;
     submitted_at: string | null; assigned_at: string | null; started_at: string | null; completed_at: string | null;
     photo_urls?: TicketPhoto[]; work_notes?: WorkNote[];
 };
 type TicketPage = { data: TicketRowType[]; current_page: number; last_page: number; per_page: number; total: number };
 
-export default function Tickets({ tickets, statusCounts, technicians }: { tickets: TicketPage; statusCounts: Record<string, number>; technicians: { id: number; name: string }[] }) {
+export default function Tickets({ tickets, statusCounts, urgentCount, technicians }: { tickets: TicketPage; statusCounts: Record<string, number>; urgentCount: number; technicians: { id: number; name: string }[] }) {
     useOrganizationRealtime('tickets.changed', ['tickets', 'statusCounts', 'technicians']);
-    const [query, setQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL');
+    const params = new URLSearchParams(window.location.search);
+    const [query, setQuery] = useState(params.get('query') ?? '');
+    const [statusFilter, setStatusFilter] = useState(params.get('status') ?? 'ALL');
+    const [urgentOnly, setUrgentOnly] = useState(params.get('urgent') === '1');
     const [selectedTicket, setSelectedTicket] = useState<TicketRowType | null>(null);
     const [loadingTicket, setLoadingTicket] = useState<number | null>(null);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [bulkAction, setBulkAction] = useState<'dispatch' | 'cancel' | null>(null);
+    const bulkDispatch = useForm({ ticket_ids: [] as number[], technician_id: '', priority: 'SEDANG' });
+    const bulkCancel = useForm({ ticket_ids: [] as number[], reason: '' });
+    const filtersReady = useRef(false);
 
     const stat = (status: string) => statusCounts[status] ?? 0;
-    const filteredTickets = tickets.data.filter((ticket) => {
-        const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
-        const haystack = `${ticket.id} ${ticket.custom_issue_category ?? ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.reporter.name} ${ticket.technician?.name ?? ''} ${ticket.description}`.toLowerCase();
-        const matchesQuery = query.trim() === '' || haystack.includes(query.toLowerCase());
-        return matchesStatus && matchesQuery;
-    });
+    useEffect(() => {
+        if (!filtersReady.current) {
+            filtersReady.current = true;
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            router.get(route('admin.tickets.index'), { page: 1, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined, per_page: tickets.per_page }, { preserveState: true, preserveScroll: true, replace: true });
+        }, 250);
+        return () => window.clearTimeout(timer);
+    }, [query, statusFilter, urgentOnly]);
+
+    const filteredTickets = tickets.data;
+    const pageIds = filteredTickets.map((ticket) => ticket.id);
+    const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const togglePage = () => setSelectedIds(allPageSelected ? selectedIds.filter((id) => !pageIds.includes(id)) : Array.from(new Set([...selectedIds, ...pageIds])));
+    const toggleTicket = (id: number) => setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    const submitBulkDispatch = () => { bulkDispatch.setData('ticket_ids', selectedIds); bulkDispatch.post(route('admin.tickets.bulk-dispatch'), { onSuccess: () => { setSelectedIds([]); setBulkAction(null); toast.success(`${selectedIds.length} tiket berhasil ditugaskan.`); }, onError: () => toast.error('Penugasan gagal. Tidak ada perubahan disimpan.') }); };
+    const submitBulkCancel = () => { bulkCancel.setData('ticket_ids', selectedIds); bulkCancel.post(route('admin.tickets.bulk-cancel'), { onSuccess: () => { setSelectedIds([]); setBulkAction(null); toast.success(`${selectedIds.length} tiket berhasil dibatalkan.`); }, onError: () => toast.error('Pembatalan gagal. Tidak ada perubahan disimpan.') }); };
 
     const statCards = [
-        { label: 'Total Tiket', value: tickets.total, icon: <FileTextIcon className="h-4 w-4 text-slate-500" /> },
-        { label: 'Menunggu', value: stat('MENUNGGU_DISPATCH'), icon: <ClockIcon className="h-4 w-4 text-slate-500" /> },
-        { label: 'Diproses', value: stat('DALAM_PENGERJAAN') + stat('DITUGASKAN'), icon: <WrenchIcon className="h-4 w-4 text-slate-500" /> },
-        { label: 'Selesai', value: stat('SELESAI'), icon: <CheckCircleIcon className="h-4 w-4 text-slate-500" /> },
+        { label: 'Total Tiket', value: tickets.total, note: 'Seluruh laporan organisasi', icon: <FileTextIcon className="h-4 w-4 text-slate-500" /> },
+        { label: 'Urgent', value: urgentCount, note: urgentCount ? 'Perlu perhatian segera' : 'Tidak ada antrean urgent', icon: <ZapIcon className="h-4 w-4 text-rose-600" />, urgent: true },
+        { label: 'Menunggu Dispatch', value: stat('MENUNGGU_DISPATCH'), note: 'Siap ditugaskan ke teknisi', icon: <ClockIcon className="h-4 w-4 text-slate-500" /> },
+        { label: 'Sedang Diproses', value: stat('DALAM_PENGERJAAN') + stat('DITUGASKAN'), note: `${stat('SELESAI')} tiket selesai`, icon: <WrenchIcon className="h-4 w-4 text-slate-500" /> },
     ];
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Admin</h2>}><Head title="Admin" />
@@ -88,23 +118,29 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
                     <h1 className="text-3xl font-bold tracking-tight">Manajemen Tiket</h1>
                     <p className="text-slate-500">Pantau antrean, assignment teknisi, dan status penyelesaian.</p>
                 </div>
-                <Button asChild className="gap-2"><Link href={route('admin.technicians.index')}><PlusIcon className="h-4 w-4" /> Kelola Tukang</Link></Button>
+                <div className="flex flex-wrap gap-2">
+                    {urgentCount > 0 && <Button variant="outline" className={urgentOnly ? 'gap-2 border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'gap-2 border-rose-200 text-rose-700 hover:bg-rose-50'} onClick={() => { setUrgentOnly((value) => !value); setStatusFilter('ALL'); }}><ZapIcon className="h-4 w-4" /> {urgentOnly ? 'Tampilkan semua tiket' : `Lihat ${urgentCount} tiket urgent`}</Button>}
+                    <Button asChild variant="outline" className="gap-2"><Link href={route('admin.technicians.index')}><PlusIcon className="h-4 w-4" /> Kelola Teknisi</Link></Button>
+                </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {statCards.map(({ label, value, icon }) => (
-                    <Card key={label}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{label}</CardTitle>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {statCards.map(({ label, value, note, icon, urgent }) => (
+                    <Card key={label} className={urgent ? 'border-rose-200 bg-rose-50/45' : undefined}>
+                        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                            <CardTitle className={urgent ? 'text-sm font-medium text-rose-700' : 'text-sm font-medium text-slate-700'}>{label}</CardTitle>
                             {icon}
                         </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{value}</div></CardContent>
+                        <CardContent>
+                            <div className="text-3xl font-bold tracking-tight text-slate-950">{value}</div>
+                            <p className={urgent ? 'mt-3 text-xs text-rose-700' : 'mt-3 text-xs text-slate-500'}>{note}</p>
+                        </CardContent>
                     </Card>
                 ))}
             </div>
 
-            <Card>
-                <CardHeader><CardTitle>Distribusi Status Laporan</CardTitle><CardDescription>Komposisi seluruh tiket organisasi.</CardDescription></CardHeader>
+            <Card className={urgentCount > 0 ? 'border-rose-200 bg-rose-50/40' : undefined}>
+                <CardHeader><CardTitle>Distribusi Status Laporan</CardTitle><CardDescription>{urgentOnly ? 'Komposisi tiket urgent yang sedang ditampilkan.' : query || statusFilter !== 'ALL' ? 'Komposisi tiket sesuai filter aktif.' : 'Komposisi seluruh tiket organisasi.'}</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     {[
                         ['Menunggu dispatch', 'MENUNGGU_DISPATCH', 'bg-amber-500'], ['Ditugaskan', 'DITUGASKAN', 'bg-blue-500'], ['Dalam pengerjaan', 'DALAM_PENGERJAAN', 'bg-violet-500'], ['Selesai', 'SELESAI', 'bg-emerald-500'], ['Dibatalkan', 'DIBATALKAN', 'bg-slate-400'],
@@ -112,9 +148,10 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-2">
+            <Card className="overflow-hidden">
+                <CardHeader className="flex flex-col gap-4 border-b bg-slate-50/50 px-5 py-5 md:flex-row md:items-center md:justify-between lg:px-6">
+                     <div className="flex items-center gap-2">
+                         <input type="checkbox" aria-label="Pilih semua tiket di halaman" checked={allPageSelected} onChange={togglePage} className="size-4 rounded border-slate-300" />
                         <span className="text-sm font-medium text-slate-500">Filter Status:</span>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                             <SelectTrigger className="w-[200px]">
@@ -134,32 +171,37 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
                         <Input placeholder="Cari ID, Unit, Nama..." value={query} onChange={e => setQuery(e.target.value)} className="pl-9" />
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                {['ID Tiket', 'Dilaporkan', 'Pelapor', 'Unit', 'Kategori', 'Teknisi', 'Status', 'Aksi'].map(h => <TableHead key={h}>{h}</TableHead>)}
+                            <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
+                                 {['', 'Tiket', 'Masalah', 'Lokasi', 'Dilaporkan', 'Teknisi', 'Status', 'Aksi'].map(h => <TableHead key={h} className="h-12 whitespace-nowrap px-5 text-xs font-semibold text-slate-500">{h}</TableHead>)}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredTickets.map(ticket => (
-                                <TableRow key={ticket.id} className="cursor-pointer" onClick={() => openTicket(ticket.id)}>
-                                    <TableCell className="font-mono text-xs font-semibold text-slate-700">#{ticket.id}</TableCell>
-                                    <TableCell className="text-xs text-slate-500 whitespace-nowrap">{ticket.submitted_at ? new Date(ticket.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</TableCell>
-                                    <TableCell>{ticket.reporter.name}</TableCell>
-                                    <TableCell>{ticket.building.name} {ticket.unit.number}</TableCell>
-                                    <TableCell><div className="flex items-center gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="h-4 w-4" />{ticket.custom_issue_category ?? ticket.issue_category.name}</div></TableCell>
-                                    <TableCell>{ticket.technician ? <span>{ticket.technician.name}</span> : <span className="text-xs italic text-slate-400">Belum ada</span>}</TableCell>
-                                    <TableCell><Status status={ticket.status} /></TableCell>
-                                    <TableCell><Button variant="outline" size="sm" disabled={loadingTicket === ticket.id} onClick={(e) => { e.stopPropagation(); openTicket(ticket.id); }}>{loadingTicket === ticket.id ? 'Memuat...' : 'Buka'}</Button></TableCell>
+                                <TableRow key={ticket.id} className="h-16 border-slate-100 hover:bg-slate-50/70">
+                                     <TableCell className="px-5"><input type="checkbox" aria-label={`Pilih tiket #${ticket.id}`} checked={selectedIds.includes(ticket.id)} onChange={() => toggleTicket(ticket.id)} className="size-4 rounded border-slate-300" /></TableCell><TableCell className="whitespace-nowrap px-5 align-middle font-mono text-xs font-semibold text-slate-700"><div className="flex flex-wrap items-center gap-1.5"> <span>#{ticket.id}</span>{ticket.is_urgent && <Badge className="h-5 border-rose-200 bg-rose-100 px-1.5 text-[9px] text-rose-700 hover:bg-rose-100">URGENT</Badge>}{ticket.priority === 'TINGGI' && <Badge className="h-5 border-amber-200 bg-amber-100 px-1.5 text-[9px] text-amber-800 hover:bg-amber-100">TINGGI</Badge>}</div></TableCell>
+                                    <TableCell className="max-w-[20rem] px-5"><div className="flex items-start gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="mt-0.5 h-4 w-4 shrink-0" /><div className="min-w-0"><p className="truncate font-medium text-slate-800">{ticket.custom_issue_category ?? ticket.issue_category.name}</p><p className="truncate text-xs text-slate-500">{ticket.description}</p></div></div></TableCell>
+                                    <TableCell className="whitespace-nowrap px-5 text-slate-700"><p>{ticket.building.name}</p><p className="text-xs text-slate-500">Unit {ticket.unit.number}</p></TableCell>
+                                    <TableCell className="whitespace-nowrap px-5 text-xs text-slate-500">{formatTicketAge(ticket.submitted_at)}</TableCell>
+                                    <TableCell className="whitespace-nowrap px-5">{ticket.technician ? <span className="text-slate-700">{ticket.technician.name}</span> : <span className="text-xs italic text-slate-400">Belum ada</span>}</TableCell>
+                                    <TableCell className="whitespace-nowrap px-5"><Status status={ticket.status} /></TableCell>
+                                    <TableCell className="px-5"><Button variant="outline" size="sm" disabled={loadingTicket === ticket.id} onClick={() => openTicket(ticket.id)}>{loadingTicket === ticket.id ? 'Memuat...' : 'Buka'}</Button></TableCell>
                                 </TableRow>
                             ))}
-                            {filteredTickets.length === 0 && <TableRow><TableCell colSpan={8} className="h-24 text-center text-slate-500">Tidak ada tiket ditemukan</TableCell></TableRow>}
+                             {filteredTickets.length === 0 && <TableRow><TableCell colSpan={8} className="h-36 text-center text-slate-500">Tidak ada tiket ditemukan</TableCell></TableRow>}
                         </TableBody>
                     </Table>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm"><span className="text-muted-foreground">{tickets.total} tiket</span><div className="flex items-center gap-1.5"><span className="mr-1 text-xs text-muted-foreground">Tampilkan</span>{[5, 10, 15, 20].map((size) => <Link key={size} href={route('admin.tickets.index', { per_page: size })} className={`inline-flex size-8 items-center justify-center rounded-md border text-xs font-medium ${tickets.per_page === size ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>{size}</Link>)}{tickets.last_page > 1 && <><Button asChild variant="outline" size="icon" className="ml-1 size-8" disabled={tickets.current_page === 1}><Link aria-label="Halaman sebelumnya" href={route('admin.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page })}>←</Link></Button><Button asChild variant="outline" size="icon" className="size-8" disabled={tickets.current_page === tickets.last_page}><Link aria-label="Halaman berikutnya" href={route('admin.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page })}>→</Link></Button></>}</div></div>
+                    </div>
+                     {selectedIds.length > 0 && <div className="flex flex-wrap items-center gap-2 border-b bg-violet-50 px-5 py-3 text-sm"><span className="mr-auto font-medium text-violet-900">{selectedIds.length} tiket dipilih</span><Button size="sm" onClick={() => setBulkAction('dispatch')}>Tugaskan Teknisi</Button><Button size="sm" variant="outline" className="border-red-200 text-red-600" onClick={() => setBulkAction('cancel')}>Batalkan</Button><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Bersihkan</Button></div>}
+                     <div className="flex flex-wrap items-center justify-between gap-4 border-t bg-slate-50/50 px-5 py-4 text-sm lg:px-6"><span className="text-muted-foreground">{tickets.total} tiket</span><div className="flex flex-wrap items-center gap-2"><span className="mr-1 text-xs text-muted-foreground">Tampilkan</span>{[5, 10, 15, 20].map((size) => <Link key={size} href={route('admin.tickets.index', { per_page: size, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined })} className={`inline-flex size-9 items-center justify-center rounded-md border text-xs font-medium ${tickets.per_page === size ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>{size}</Link>)}{tickets.last_page > 1 && <><Button asChild variant="outline" size="icon" className="ml-1 size-9" disabled={tickets.current_page === 1}><Link aria-label="Halaman sebelumnya" href={route('admin.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined })}>←</Link></Button><Button asChild variant="outline" size="icon" className="size-9" disabled={tickets.current_page === tickets.last_page}><Link aria-label="Halaman berikutnya" href={route('admin.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined })}>→</Link></Button></>}</div></div>
                 </CardContent>
             </Card>
+
+            <Dialog open={bulkAction === 'dispatch'} onOpenChange={(open) => !open && setBulkAction(null)}><DialogContent><DialogHeader><DialogTitle>Tugaskan Teknisi</DialogTitle><DialogDescription>{selectedIds.length} tiket akan ditugaskan.</DialogDescription></DialogHeader><form onSubmit={(e) => { e.preventDefault(); submitBulkDispatch(); }} className="space-y-4"><Select value={bulkDispatch.data.technician_id} onValueChange={(value) => bulkDispatch.setData('technician_id', value)}><SelectTrigger><SelectValue placeholder="Pilih teknisi" /></SelectTrigger><SelectContent>{technicians.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}</SelectContent></Select><Select value={bulkDispatch.data.priority} onValueChange={(value) => bulkDispatch.setData('priority', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['TINGGI', 'SEDANG', 'RENDAH'].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select><Button disabled={bulkDispatch.processing || !bulkDispatch.data.technician_id} className="w-full">{bulkDispatch.processing ? 'Menugaskan...' : 'Konfirmasi Penugasan'}</Button></form></DialogContent></Dialog>
+            <Dialog open={bulkAction === 'cancel'} onOpenChange={(open) => !open && setBulkAction(null)}><DialogContent><DialogHeader><DialogTitle>Batalkan Tiket</DialogTitle><DialogDescription>{selectedIds.length} tiket akan dibatalkan. Tindakan ini tidak dapat dipulihkan.</DialogDescription></DialogHeader><form onSubmit={(e) => { e.preventDefault(); submitBulkCancel(); }} className="space-y-4"><Input required placeholder="Alasan pembatalan" value={bulkCancel.data.reason} onChange={(e) => bulkCancel.setData('reason', e.target.value)} /><Button disabled={bulkCancel.processing || !bulkCancel.data.reason.trim()} variant="destructive" className="w-full">{bulkCancel.processing ? 'Membatalkan...' : 'Konfirmasi Pembatalan'}</Button></form></DialogContent></Dialog>
 
             <Dialog open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
                 <DialogContent className="max-w-5xl">
@@ -187,13 +229,13 @@ function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType;
 
     return <div className="space-y-6">
         <DialogHeader>
-            <div className="flex items-center gap-3"><Badge variant="outline">#{ticket.id}</Badge><Status status={ticket.status} /></div>
+            <div className="flex items-center gap-3"><Badge variant="outline">#{ticket.id}</Badge>{ticket.is_urgent && <Badge className="border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-100"><ZapIcon className="mr-1 h-3 w-3" />URGENT</Badge>}<Status status={ticket.status} /></div>
             <DialogTitle>Detail Tiket</DialogTitle>
             <DialogDescription>Kelola penugasan dan pantau progres work order.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 sm:grid-cols-2">
-            <Card><CardHeader><CardTitle className="text-sm">Info Pelapor</CardTitle></CardHeader><CardContent className="space-y-3"><div><p className="font-semibold">{ticket.reporter.name}</p><p className="text-sm text-slate-500">{ticket.reporter.phone_number}</p></div><div><p className="text-xs text-slate-500">Unit Terkait</p><p className="font-medium">{ticket.building.name} {ticket.unit.number}</p></div></CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm">Info Pelapor</CardTitle></CardHeader><CardContent className="space-y-3"><div><p className="font-semibold">{ticket.reporter?.name ?? ticket.reporter_name ?? 'Pelapor urgent'}</p><p className="text-sm text-slate-500">{ticket.reporter?.phone_number ?? ticket.reporter_phone ?? '-'}</p></div><div><p className="text-xs text-slate-500">Unit Terkait</p><p className="font-medium">{ticket.building.name} {ticket.unit.number}</p></div></CardContent></Card>
             <Card><CardHeader><CardTitle className="text-sm">Detail Masalah</CardTitle></CardHeader><CardContent><div className="mb-2 flex items-center gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="h-4 w-4" /><span className="font-semibold">{ticket.custom_issue_category ?? ticket.issue_category.name}</span></div><p className="text-sm text-slate-700">{ticket.description}</p>{damagePhotos.length > 0 && <div className="mt-3 flex gap-2">{damagePhotos.map((p) => <a key={p.url} href={p.url} target="_blank" rel="noreferrer"><img src={p.url} alt="Kerusakan" className="h-16 w-16 rounded-md border object-cover" /></a>)}</div>}</CardContent></Card>
         </div>
 
@@ -201,7 +243,7 @@ function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType;
             <CardHeader><CardTitle className="text-sm">Progres & Penugasan</CardTitle></CardHeader>
             <CardContent>
                 {ticket.status === 'MENUNGGU_DISPATCH' ? (
-                    <form onSubmit={(e) => { e.preventDefault(); dispatch.post(route('admin.tickets.dispatch', ticket.id), { onSuccess: onClose }); }} className="space-y-4">
+                    <form onSubmit={(e) => { e.preventDefault(); dispatch.post(route('admin.tickets.dispatch', ticket.id), { onSuccess: () => { onClose(); toast.success('Tiket berhasil ditugaskan.'); }, onError: () => toast.error('Penugasan tiket gagal.') }); }} className="space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2"><Label>Pilih Teknisi</Label><Select value={dispatch.data.technician_id} onValueChange={(value) => dispatch.setData('technician_id', value)}><SelectTrigger><SelectValue placeholder="-- Pilih --" /></SelectTrigger><SelectContent>{technicians.map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}</SelectContent></Select></div>
                             <div className="space-y-2"><Label>Prioritas</Label><Select value={dispatch.data.priority} onValueChange={(value) => dispatch.setData('priority', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="TINGGI">TINGGI</SelectItem><SelectItem value="SEDANG">SEDANG</SelectItem><SelectItem value="RENDAH">RENDAH</SelectItem></SelectContent></Select></div>
@@ -217,7 +259,7 @@ function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType;
             </CardContent>
         </Card>
 
-        {!['SELESAI', 'DIBATALKAN'].includes(ticket.status) && <Card className="border-red-200"><CardHeader><CardTitle className="text-sm text-red-700">Zona Bahaya</CardTitle></CardHeader><CardContent><form onSubmit={(e) => { e.preventDefault(); cancel.post(route('admin.tickets.cancel', ticket.id), { onSuccess: onClose }); }} className="flex gap-2"><Input required placeholder="Alasan pembatalan (fiktif, ganda, dll)" value={cancel.data.reason} onChange={e => cancel.setData('reason', e.target.value)} className="border-red-200" /><Button variant="outline" disabled={cancel.processing} className="border-red-200 text-red-600 hover:bg-red-50">Batalkan Tiket</Button></form></CardContent></Card>}
+        {!['SELESAI', 'DIBATALKAN'].includes(ticket.status) && <Card className="border-red-200"><CardHeader><CardTitle className="text-sm text-red-700">Zona Bahaya</CardTitle></CardHeader><CardContent><form onSubmit={(e) => { e.preventDefault(); cancel.post(route('admin.tickets.cancel', ticket.id), { onSuccess: () => { onClose(); toast.success('Tiket berhasil dibatalkan.'); }, onError: () => toast.error('Pembatalan tiket gagal.') }); }} className="flex gap-2"><Input required placeholder="Alasan pembatalan (fiktif, ganda, dll)" value={cancel.data.reason} onChange={e => cancel.setData('reason', e.target.value)} className="border-red-200" /><Button variant="outline" disabled={cancel.processing} className="border-red-200 text-red-600 hover:bg-red-50">Batalkan Tiket</Button></form></CardContent></Card>}
     </div>;
 }
 
