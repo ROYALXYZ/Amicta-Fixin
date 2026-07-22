@@ -1,11 +1,30 @@
 import { PageProps } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import {
+    MobileNav,
+    MobileNavHeader,
+    MobileNavMenu,
+    MobileNavToggle,
+    NavBody,
+    Navbar,
+    NavbarButton,
+    NavbarLogo,
+    NavItems,
+} from '@/Components/ui/resizable-navbar';
+import { useState } from 'react';
+import ShapeGrid from '@/Components/ShapeGrid';
 
 const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
 const StarIcon = ({ className = 'h-4 w-4 fill-current' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className}><path d="m12 2.25 2.83 6.06 6.67.52-5.1 4.36 1.57 6.48L12 16.36 6.03 19.67l1.57-6.48-5.1-4.36 6.67-.52L12 2.25Z" /></svg>;
 const ArrowRightIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4.5 12h15m0 0-6.75-6.75M19.5 12l-6.75 6.75" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 export default function Welcome({ auth }: PageProps<{ laravelVersion: string; phpVersion: string }>) {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const navItems = [
+        { name: 'Fitur', link: '#features' },
+        { name: 'Cara Kerja', link: '#workflow' },
+        { name: 'Kontak', link: '#contact' },
+    ];
     const stats = [
         { value: '2,400+', label: 'Unit Terkelola' },
         { value: '98%', label: 'Tiket Terselesaikan' },
@@ -26,28 +45,45 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
         <>
             <Head title="FixIn" />
             <div className="min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
-                <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-black/5 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 bg-violet-700 rounded-lg flex items-center justify-center shadow-md shadow-violet-700/30">
-                                <WrenchIcon className="h-4 w-4 text-white" />
-                            </div>
-                            <span className="font-extrabold text-slate-900 text-lg tracking-tight">Fix<span className="text-violet-700">In</span></span>
+                <Navbar className="fixed top-0">
+                    <NavBody>
+                        <NavbarLogo />
+                        <NavItems items={navItems} />
+                        <div className="flex items-center gap-3">
+                            {auth.user ? <NavbarButton as={Link} href={route('dashboard')}>Dashboard</NavbarButton> : <>
+                                <NavbarButton as={Link} href={route('login')} variant="secondary">Masuk</NavbarButton>
+                                <NavbarButton as={Link} href={route('register')} variant="dark">Daftar</NavbarButton>
+                            </>}
                         </div>
-                        <div className="hidden md:flex items-center gap-3">
-                            {auth.user ? (
-                                <Link href={route('dashboard')} className="px-5 py-2 bg-violet-700 hover:bg-violet-800 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-violet-700/25">Dashboard</Link>
-                            ) : (
-                                <>
-                                    <Link href={route('login')} className="px-4 py-2 text-sm font-semibold text-slate-900 hover:text-violet-700 transition-colors">Masuk</Link>
-                                    <Link href={route('register')} className="px-5 py-2 bg-violet-700 hover:bg-violet-800 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-violet-700/25">Daftar Sekarang</Link>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </nav>
+                    </NavBody>
+                    <MobileNav>
+                        <MobileNavHeader>
+                            <NavbarLogo />
+                            <MobileNavToggle isOpen={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+                        </MobileNavHeader>
+                        <MobileNavMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)}>
+                            {navItems.map((item) => <a key={item.link} href={item.link} onClick={() => setIsMobileMenuOpen(false)} className="text-neutral-600"><span>{item.name}</span></a>)}
+                            {auth.user ? <NavbarButton as={Link} href={route('dashboard')} onClick={() => setIsMobileMenuOpen(false)} className="w-full">Dashboard</NavbarButton> : <>
+                                <NavbarButton as={Link} href={route('login')} onClick={() => setIsMobileMenuOpen(false)} variant="secondary" className="w-full">Masuk</NavbarButton>
+                                <NavbarButton as={Link} href={route('register')} onClick={() => setIsMobileMenuOpen(false)} className="w-full">Daftar</NavbarButton>
+                            </>}
+                        </MobileNavMenu>
+                    </MobileNav>
+                </Navbar>
 
                 <section className="relative min-h-screen flex items-center pt-16 bg-slate-50 border-b border-slate-200">
+                    <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+                        <ShapeGrid
+                            speed={0.25}
+                            squareSize={48}
+                            direction="diagonal"
+                            borderColor="rgba(124, 58, 237, 0.18)"
+                            hoverFillColor="rgba(124, 58, 237, 0.32)"
+                            shape="square"
+                            hoverTrailAmount={5}
+                            className="opacity-80"
+                        />
+                    </div>
                     <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-16 items-center w-full">
                         <div>
                             <div className="inline-flex items-center gap-2 bg-violet-100 border border-violet-200 rounded-full px-4 py-1.5 text-xs font-semibold text-violet-700 mb-6">
@@ -108,13 +144,13 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                     </div>
                 </section>
 
-                <section className="bg-slate-900 py-12 border-t border-slate-800">
+                <section id="workflow" className="bg-slate-900 py-12 border-t border-slate-800">
                     <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
                         {stats.map(({ value, label }) => <div key={label}><p className="text-4xl font-extrabold text-white mb-1">{value}</p><p className="text-slate-400 text-sm">{label}</p></div>)}
                     </div>
                 </section>
 
-                <section className="py-24 bg-slate-50">
+                <section id="features" className="py-24 bg-slate-50">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="text-center mb-16">
                             <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-full px-4 py-1.5 text-xs font-semibold text-violet-700 mb-4">Fitur Unggulan</div>
@@ -133,7 +169,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                     </div>
                 </section>
 
-                <section className="py-24 bg-white border-t border-slate-200">
+                <section id="contact" className="py-24 bg-white border-t border-slate-200">
                     <div className="max-w-3xl mx-auto px-6 text-center">
                         <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-900 mb-5 leading-tight">Siap merapikan<br />operasional gedung Anda?</h2>
                         <p className="text-slate-600 text-lg mb-10">Tinggalkan pencatatan manual. Beralih ke sistem tiket yang transparan untuk penghuni, admin, dan teknisi.</p>
