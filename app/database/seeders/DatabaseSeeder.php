@@ -9,18 +9,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach ([
-            'AC' => 'AC',
-            'LISTRIK' => 'Listrik',
-            'PIPA' => 'Pipa',
-            'SIPIL' => 'Sipil',
-            'LAINNYA' => 'Lainnya',
-        ] as $code => $name) {
-            IssueCategory::query()->updateOrCreate(
-                ['code' => $code],
-                ['name' => $name, 'is_active' => true],
-            );
-        }
+        IssueCategory::query()->updateOrCreate(
+            ['code' => 'LAINNYA'],
+            ['name' => 'Lainnya', 'is_active' => true],
+        );
 
         $this->call(DemoTenantSeeder::class);
     }

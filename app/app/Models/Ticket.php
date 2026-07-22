@@ -19,6 +19,7 @@ class Ticket extends Model
         'building_id',
         'unit_id',
         'issue_category_id',
+        'custom_issue_category',
         'description',
         'priority',
         'technician_id',

@@ -26,6 +26,7 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
         if (user.role === 'PLATFORM_OWNER') return [{ name: 'platform.organizations.index', label: 'Organisasi', icon: Building2 }];
         if (user.role === 'ADMIN') return [
             { name: 'admin.tickets.index', label: 'Dashboard Tiket', icon: LayoutDashboard },
+            { name: 'admin.locations.index', label: 'Gedung & Unit', icon: Building2 },
             { name: 'admin.technicians.index', label: 'Manajemen Tukang', icon: UsersRound },
         ];
         if (user.role === 'TECHNICIAN') return [{ name: 'technician.tickets.index', label: 'Work Order', icon: Wrench }];

@@ -8,17 +8,20 @@ import { Label } from '@/Components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 import { Head, useForm } from '@inertiajs/react';
 import { Pencil, Plus, Power, Trash2, UsersRound } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 
 type Technician = { id: number; name: string; username: string; phone_number: string; is_active: boolean; assigned_tickets_count: number; created_at: string };
 
 export default function Technicians({ technicians }: { technicians: Technician[] }) {
+    useOrganizationRealtime('technicians.changed', ['technicians']);
     const [rows, setRows] = useState(technicians);
     const [editing, setEditing] = useState<Technician | null>(null);
     const [adding, setAdding] = useState(false);
     const [toggling, setToggling] = useState<number | null>(null);
     const create = useForm({ name: '', username: '', phone_number: '', password: '' });
     const update = useForm({ name: '', username: '', password: '' });
+    useEffect(() => setRows(technicians), [technicians]);
     const openEdit = (technician: Technician) => { setEditing(technician); update.setData({ name: technician.name, username: technician.username, password: '' }); };
     const toggle = async (technician: Technician) => {
         setToggling(technician.id);

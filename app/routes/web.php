@@ -46,6 +46,7 @@ Route::middleware(['auth', 'tenant.user', 'role:TECHNICIAN'])->prefix('technicia
 
 Route::middleware(['auth', 'tenant.user', 'role:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
+    Route::get('/locations', [AdminTicketController::class, 'locations'])->name('locations.index');
     Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show');
     Route::get('/technicians', [AdminTechnicianController::class, 'index'])->name('technicians.index');
     Route::post('/buildings', [AdminTicketController::class, 'building'])->name('buildings.store');

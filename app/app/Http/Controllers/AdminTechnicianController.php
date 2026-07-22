@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Events\OrganizationTechniciansChanged;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use App\Support\TenantContext;
@@ -42,6 +43,7 @@ class AdminTechnicianController extends Controller
         ]);
 
         $this->forgetTechnicianCache($organization->id);
+        OrganizationTechniciansChanged::dispatch($organization->id, 'created');
         return back();
     }
 
@@ -62,6 +64,7 @@ class AdminTechnicianController extends Controller
         $technician->update($data);
 
         $this->forgetTechnicianCache($technician->organization_id);
+        OrganizationTechniciansChanged::dispatch($technician->organization_id, 'updated');
         return back();
     }
 
@@ -70,6 +73,7 @@ class AdminTechnicianController extends Controller
         $this->technician($request, $technician);
         $technician->update(['is_active' => ! $technician->is_active]);
         $this->forgetTechnicianCache($technician->organization_id);
+        OrganizationTechniciansChanged::dispatch($technician->organization_id, 'updated');
 
         if ($request->expectsJson()) {
             return response()->json(['is_active' => $technician->is_active]);
@@ -85,6 +89,7 @@ class AdminTechnicianController extends Controller
         $technician->delete();
 
         $this->forgetTechnicianCache($technician->organization_id);
+        OrganizationTechniciansChanged::dispatch($technician->organization_id, 'deleted');
         return back();
     }
 

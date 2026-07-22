@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from '@/Components/ui/select';
 import { Label } from '@/Components/ui/label';
+import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 
 const FileTextIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ClockIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -50,15 +51,16 @@ function CategoryIcon({ name, className }: { name: string; className?: string })
 type TicketPhoto = { type: string; mime_type: string; url: string; created_at: string | null };
 type WorkNote = { body: string; created_at: string | null };
 type TicketRowType = {
-    id: number; status: string; issue_category: { name: string };
+    id: number; status: string; issue_category: { name: string }; custom_issue_category: string | null;
     building: { name: string }; unit: { number: string }; reporter: { name: string; phone_number: string };
     technician: { name: string } | null; description: string; priority: string | null;
     submitted_at: string | null; assigned_at: string | null; started_at: string | null; completed_at: string | null;
     photo_urls?: TicketPhoto[]; work_notes?: WorkNote[];
 };
-type TicketPage = { data: TicketRowType[]; current_page: number; last_page: number; total: number };
+type TicketPage = { data: TicketRowType[]; current_page: number; last_page: number; per_page: number; total: number };
 
 export default function Tickets({ tickets, statusCounts, technicians }: { tickets: TicketPage; statusCounts: Record<string, number>; technicians: { id: number; name: string }[] }) {
+    useOrganizationRealtime('tickets.changed', ['tickets', 'statusCounts', 'technicians']);
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedTicket, setSelectedTicket] = useState<TicketRowType | null>(null);
@@ -67,7 +69,7 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
     const stat = (status: string) => statusCounts[status] ?? 0;
     const filteredTickets = tickets.data.filter((ticket) => {
         const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
-        const haystack = `${ticket.id} ${ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.reporter.name} ${ticket.technician?.name ?? ''} ${ticket.description}`.toLowerCase();
+        const haystack = `${ticket.id} ${ticket.custom_issue_category ?? ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.reporter.name} ${ticket.technician?.name ?? ''} ${ticket.description}`.toLowerCase();
         const matchesQuery = query.trim() === '' || haystack.includes(query.toLowerCase());
         return matchesStatus && matchesQuery;
     });
@@ -146,7 +148,7 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
                                     <TableCell className="text-xs text-slate-500 whitespace-nowrap">{ticket.submitted_at ? new Date(ticket.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</TableCell>
                                     <TableCell>{ticket.reporter.name}</TableCell>
                                     <TableCell>{ticket.building.name} {ticket.unit.number}</TableCell>
-                                    <TableCell><div className="flex items-center gap-2"><CategoryIcon name={ticket.issue_category.name} className="h-4 w-4" />{ticket.issue_category.name}</div></TableCell>
+                                    <TableCell><div className="flex items-center gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="h-4 w-4" />{ticket.custom_issue_category ?? ticket.issue_category.name}</div></TableCell>
                                     <TableCell>{ticket.technician ? <span>{ticket.technician.name}</span> : <span className="text-xs italic text-slate-400">Belum ada</span>}</TableCell>
                                     <TableCell><Status status={ticket.status} /></TableCell>
                                     <TableCell><Button variant="outline" size="sm" disabled={loadingTicket === ticket.id} onClick={(e) => { e.stopPropagation(); openTicket(ticket.id); }}>{loadingTicket === ticket.id ? 'Memuat...' : 'Buka'}</Button></TableCell>
@@ -155,7 +157,7 @@ export default function Tickets({ tickets, statusCounts, technicians }: { ticket
                             {filteredTickets.length === 0 && <TableRow><TableCell colSpan={8} className="h-24 text-center text-slate-500">Tidak ada tiket ditemukan</TableCell></TableRow>}
                         </TableBody>
                     </Table>
-                    {tickets.last_page > 1 && <div className="mt-4 flex items-center justify-between text-sm"><span className="text-muted-foreground">Halaman {tickets.current_page} dari {tickets.last_page}</span><div className="flex gap-2"><Button asChild variant="outline" size="sm" disabled={tickets.current_page === 1}><Link href={route('admin.tickets.index', { page: tickets.current_page - 1 })}>Sebelumnya</Link></Button><Button asChild variant="outline" size="sm" disabled={tickets.current_page === tickets.last_page}><Link href={route('admin.tickets.index', { page: tickets.current_page + 1 })}>Berikutnya</Link></Button></div></div>}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm"><span className="text-muted-foreground">{tickets.total} tiket</span><div className="flex items-center gap-2"><select aria-label="Jumlah tiket per halaman" className="h-9 rounded-md border bg-background px-2" value={tickets.per_page} onChange={(event) => window.location.assign(route('admin.tickets.index', { per_page: event.target.value }))}>{[5, 10, 25].map((size) => <option key={size} value={size}>{size} / halaman</option>)}</select>{tickets.last_page > 1 && <><Button asChild variant="outline" size="sm" disabled={tickets.current_page === 1}><Link href={route('admin.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page })}>Sebelumnya</Link></Button><Button asChild variant="outline" size="sm" disabled={tickets.current_page === tickets.last_page}><Link href={route('admin.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page })}>Berikutnya</Link></Button></>}</div></div>
                 </CardContent>
             </Card>
 
@@ -192,7 +194,7 @@ function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType;
 
         <div className="grid gap-6 sm:grid-cols-2">
             <Card><CardHeader><CardTitle className="text-sm">Info Pelapor</CardTitle></CardHeader><CardContent className="space-y-3"><div><p className="font-semibold">{ticket.reporter.name}</p><p className="text-sm text-slate-500">{ticket.reporter.phone_number}</p></div><div><p className="text-xs text-slate-500">Unit Terkait</p><p className="font-medium">{ticket.building.name} {ticket.unit.number}</p></div></CardContent></Card>
-            <Card><CardHeader><CardTitle className="text-sm">Detail Masalah</CardTitle></CardHeader><CardContent><div className="mb-2 flex items-center gap-2"><CategoryIcon name={ticket.issue_category.name} className="h-4 w-4" /><span className="font-semibold">{ticket.issue_category.name}</span></div><p className="text-sm text-slate-700">{ticket.description}</p>{damagePhotos.length > 0 && <div className="mt-3 flex gap-2">{damagePhotos.map((p) => <a key={p.url} href={p.url} target="_blank" rel="noreferrer"><img src={p.url} alt="Kerusakan" className="h-16 w-16 rounded-md border object-cover" /></a>)}</div>}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm">Detail Masalah</CardTitle></CardHeader><CardContent><div className="mb-2 flex items-center gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="h-4 w-4" /><span className="font-semibold">{ticket.custom_issue_category ?? ticket.issue_category.name}</span></div><p className="text-sm text-slate-700">{ticket.description}</p>{damagePhotos.length > 0 && <div className="mt-3 flex gap-2">{damagePhotos.map((p) => <a key={p.url} href={p.url} target="_blank" rel="noreferrer"><img src={p.url} alt="Kerusakan" className="h-16 w-16 rounded-md border object-cover" /></a>)}</div>}</CardContent></Card>
         </div>
 
         <Card>
