@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - 1rem)); }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration, 32s) linear infinite;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

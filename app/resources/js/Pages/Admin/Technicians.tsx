@@ -10,6 +10,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { Pencil, Plus, Power, Trash2, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
+import { toast } from 'sonner';
 
 type Technician = { id: number; name: string; username: string; phone_number: string; is_active: boolean; assigned_tickets_count: number; created_at: string };
 
@@ -28,8 +29,9 @@ export default function Technicians({ technicians }: { technicians: Technician[]
         try {
             const response = await window.axios.patch(route('admin.technicians.toggle', technician.id), {}, { headers: { Accept: 'application/json' } });
             setRows((current) => current.map((row) => row.id === technician.id ? { ...row, is_active: response.data.is_active } : row));
+            toast.success(`Teknisi ${technician.is_active ? 'dinonaktifkan' : 'diaktifkan'}.`);
         } catch {
-            window.alert('Status tukang gagal diperbarui. Coba lagi.');
+            toast.error('Status teknisi gagal diperbarui. Coba lagi.');
         } finally {
             setToggling(null);
         }
@@ -47,8 +49,8 @@ export default function Technicians({ technicians }: { technicians: Technician[]
                     {rows.length === 0 && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Belum ada tukang.</TableCell></TableRow>}
                 </TableBody></Table>
             </CardContent></Card>
-            <Dialog open={adding} onOpenChange={setAdding}><DialogContent><DialogHeader><DialogTitle>Tambah Tukang</DialogTitle><DialogDescription>Buat akun baru untuk menerima work order.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); create.post(route('admin.technicians.store'), { onSuccess: () => { create.reset(); setAdding(false); } }); }}><Field label="Nama" value={create.data.name} onChange={(value) => create.setData('name', value)} error={create.errors.name} /><Field label="Username" value={create.data.username} onChange={(value) => create.setData('username', value)} error={create.errors.username} /><Field label="WhatsApp" type="tel" value={create.data.phone_number} onChange={(value) => create.setData('phone_number', value)} error={create.errors.phone_number} /><Field label="Password sementara" type="password" value={create.data.password} onChange={(value) => create.setData('password', value)} error={create.errors.password} /><Button className="w-full" disabled={create.processing}>{create.processing ? 'Menyimpan...' : 'Simpan'}</Button></form></DialogContent></Dialog>
-            <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>{editing && <DialogContent><DialogHeader><DialogTitle>Ubah Akun Tukang</DialogTitle><DialogDescription>Kosongkan password bila tidak ingin menggantinya.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); update.patch(route('admin.technicians.update', editing.id), { onSuccess: () => { update.reset(); setEditing(null); } }); }}><Field label="Nama" value={update.data.name} onChange={(value) => update.setData('name', value)} /><Field label="Username" value={update.data.username} onChange={(value) => update.setData('username', value)} /><Field label="Password baru" type="password" value={update.data.password} onChange={(value) => update.setData('password', value)} /><Button className="w-full" disabled={update.processing}>Simpan Perubahan</Button></form></DialogContent>}</Dialog>
+            <Dialog open={adding} onOpenChange={setAdding}><DialogContent><DialogHeader><DialogTitle>Tambah Tukang</DialogTitle><DialogDescription>Buat akun baru untuk menerima work order.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); create.post(route('admin.technicians.store'), { onSuccess: () => { create.reset(); setAdding(false); toast.success('Akun teknisi berhasil dibuat.'); }, onError: () => toast.error('Akun teknisi gagal dibuat.') }); }}><Field label="Nama" value={create.data.name} onChange={(value) => create.setData('name', value)} error={create.errors.name} /><Field label="Username" value={create.data.username} onChange={(value) => create.setData('username', value)} error={create.errors.username} /><Field label="WhatsApp" type="tel" value={create.data.phone_number} onChange={(value) => create.setData('phone_number', value)} error={create.errors.phone_number} /><Field label="Password sementara" type="password" value={create.data.password} onChange={(value) => create.setData('password', value)} error={create.errors.password} /><Button className="w-full" disabled={create.processing}>{create.processing ? 'Menyimpan...' : 'Simpan'}</Button></form></DialogContent></Dialog>
+            <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>{editing && <DialogContent><DialogHeader><DialogTitle>Ubah Akun Tukang</DialogTitle><DialogDescription>Kosongkan password bila tidak ingin menggantinya.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); update.patch(route('admin.technicians.update', editing.id), { onSuccess: () => { update.reset(); setEditing(null); toast.success('Akun teknisi berhasil diperbarui.'); }, onError: () => toast.error('Akun teknisi gagal diperbarui.') }); }}><Field label="Nama" value={update.data.name} onChange={(value) => update.setData('name', value)} /><Field label="Username" value={update.data.username} onChange={(value) => update.setData('username', value)} /><Field label="Password baru" type="password" value={update.data.password} onChange={(value) => update.setData('password', value)} /><Button className="w-full" disabled={update.processing}>Simpan Perubahan</Button></form></DialogContent>}</Dialog>
         </div>
     </AuthenticatedLayout>;
 }

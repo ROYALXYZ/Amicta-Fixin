@@ -7,6 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
+import { toast } from 'sonner';
 
 const CheckCircleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" /><path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ZapIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -179,14 +180,14 @@ function WorkCard({ ticket }: { ticket: TicketRowType }) {
         </CardContent>
 
         <div className="border-t border-slate-100 p-6 bg-slate-50/50 mt-auto rounded-b-xl">
-        {ticket.status === 'DITUGASKAN' && <form onSubmit={(e) => { e.preventDefault(); note.post(route('technician.tickets.start', ticket.id)); }}><Button disabled={note.processing} className="w-full">Mulai Pengerjaan</Button></form>}
+        {ticket.status === 'DITUGASKAN' && <form onSubmit={(e) => { e.preventDefault(); note.post(route('technician.tickets.start', ticket.id), { onSuccess: () => toast.success('Pengerjaan dimulai.'), onError: () => toast.error('Gagal memulai pengerjaan.') }); }}><Button disabled={note.processing} className="w-full">Mulai Pengerjaan</Button></form>}
         {ticket.status === 'DALAM_PENGERJAAN' && <div className="space-y-4">
-            <form onSubmit={(event) => { event.preventDefault(); note.post(route('technician.tickets.note', ticket.id), { onSuccess: () => { note.reset(); completion.setData('work_note', ''); } }); }}>
+            <form onSubmit={(event) => { event.preventDefault(); note.post(route('technician.tickets.note', ticket.id), { onSuccess: () => { note.reset(); completion.setData('work_note', ''); toast.success('Pesan berhasil ditambahkan.'); }, onError: () => toast.error('Pesan gagal ditambahkan.') }); }}>
                 <textarea aria-label="Catatan pekerjaan" required rows={2} className="flex min-h-[60px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition" placeholder="Tambahkan progress..." value={note.data.body} onChange={(event) => { note.setData('body', event.target.value); completion.setData('work_note', event.target.value); }} />
                 {note.hasErrors && <p className="mt-1 text-xs font-medium text-red-500">{note.errors.body}</p>}
                 <Button variant="outline" size="sm" disabled={note.processing} className="mt-2 w-full">Simpan Catatan</Button>
             </form>
-            <form className="border-t border-slate-200 pt-4" onSubmit={(event) => { event.preventDefault(); completion.post(route('technician.tickets.complete', ticket.id), { onSuccess: () => completion.reset() }); }}>
+            <form className="border-t border-slate-200 pt-4" onSubmit={(event) => { event.preventDefault(); completion.post(route('technician.tickets.complete', ticket.id), { onSuccess: () => { completion.reset(); toast.success('Tiket ditandai selesai.'); }, onError: () => toast.error('Tiket gagal diselesaikan.') }); }}>
                 <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); selectPhoto(event.dataTransfer.files[0] ?? null); }} className="relative flex w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-white py-5 text-sm hover:bg-slate-50 transition-colors cursor-pointer">
                     {preview ? <img src={preview} alt="Preview penyelesaian" className="mb-2 h-16 w-16 rounded-md border border-slate-200 object-cover shadow-sm" /> : <div className="mb-2 text-slate-400"><CheckCircleIcon className="h-6 w-6" /></div>}
                     <span className="font-medium text-xs text-center px-4 text-slate-700">{completion.data.completion_photo ? completion.data.completion_photo.name : 'Pilih/Seret Bukti Penyelesaian'}</span>
