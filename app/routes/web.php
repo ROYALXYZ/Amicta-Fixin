@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResidentTicketController;
 use App\Http\Controllers\TechnicianTicketController;
 use App\Http\Controllers\UrgentTicketController;
+use App\Http\Controllers\TelegramAuditController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,6 +29,9 @@ Route::get('/dashboard', function () {
 
 Route::get('/urgent', [UrgentTicketController::class, 'create'])->name('urgent.create');
 Route::post('/urgent', [UrgentTicketController::class, 'store'])->name('urgent.store');
+
+Route::post('/integrations/telegram/audit/webhook', [TelegramAuditController::class, 'webhook'])
+    ->middleware(\App\Http\Middleware\VerifyTelegramWebhookSecret::class);
 
 Route::middleware(['auth', 'tenant.user'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

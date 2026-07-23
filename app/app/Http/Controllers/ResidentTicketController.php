@@ -10,6 +10,8 @@ use App\Models\Ticket;
 use App\Models\TicketPhoto;
 use App\Models\TicketStatusHistory;
 use App\Models\Unit;
+use App\Jobs\SendReportTelegramNotification;
+use App\Support\AuditLogger;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -68,8 +70,9 @@ class ResidentTicketController extends Controller
         $building = Building::where('organization_id', $org->id)->where('is_active', true)->findOrFail($data['building_id']);
         Unit::where('organization_id', $org->id)->where('building_id', $building->id)->where('is_active', true)->findOrFail($data['unit_id']);
         $category = IssueCategory::firstOrCreate(['code' => 'LAINNYA'], ['name' => 'Lainnya', 'is_active' => true]);
+        $ticket = null;
         try {
-            DB::transaction(function () use ($data, $org, $request, $category) {
+            DB::transaction(function () use ($data, $org, $request, $category, &$ticket) {
                 $ticket = Ticket::create(['organization_id' => $org->id, 'reporter_id' => $request->user()->id, 'building_id' => $data['building_id'], 'unit_id' => $data['unit_id'], 'issue_category_id' => $category->id, 'custom_issue_category' => $data['issue_category_name'], 'description' => $data['description'], 'status' => TicketStatus::WaitingDispatch]);
                 $file = $request->file('damage_photo');
                 $path = "organizations/{$org->id}/tickets/{$ticket->id}/damage.".($file->extension() ?: 'jpg');
@@ -82,6 +85,11 @@ class ResidentTicketController extends Controller
 
             return back()->withErrors(['damage_photo' => 'Foto sudah valid, tetapi penyimpanan gagal. Coba lagi beberapa saat.']);
         }
+
+        abort_unless($ticket instanceof Ticket, 500);
+        /** @var Ticket $ticket */
+        AuditLogger::record('ticket.created', "Membuat laporan #{$ticket->id}", $org, $request->user(), $ticket, ['status' => $ticket->status?->value]);
+        SendReportTelegramNotification::dispatch($ticket->id)->afterCommit();
 
         Cache::forget("admin:{$org->id}:tickets:1");
         Cache::forget("admin:{$org->id}:ticket-status-counts");

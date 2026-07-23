@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\TicketPhoto;
 use App\Models\TicketStatusHistory;
 use App\Models\TicketWorkNote;
+use App\Support\AuditLogger;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -46,6 +47,7 @@ class TechnicianTicketController extends Controller
         abort_unless($ticket->organization_id === $o->id && $ticket->technician_id === $r->user()->id && $ticket->status === TicketStatus::Assigned, 403);
         $ticket->update(['status' => TicketStatus::InProgress]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::Assigned, 'new_status' => TicketStatus::InProgress, 'changed_by' => $r->user()->id]);
+        AuditLogger::record('ticket.started', "Memulai tiket #{$ticket->id}", $o, $r->user(), $ticket);
         try {
             OrganizationTicketsChanged::dispatch($o->id, 'updated');
         } catch (\Throwable $exception) {
@@ -61,6 +63,7 @@ class TechnicianTicketController extends Controller
         abort_unless($ticket->organization_id === $o->id && $ticket->technician_id === $r->user()->id && $ticket->status === TicketStatus::InProgress, 403);
         $d = $r->validate(['body' => 'required|string|max:2000']);
         TicketWorkNote::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'technician_id' => $r->user()->id, 'body' => $d['body']]);
+        AuditLogger::record('ticket.note_added', "Menambah catatan tiket #{$ticket->id}", $o, $r->user(), $ticket);
         try {
             OrganizationTicketsChanged::dispatch($o->id, 'updated');
         } catch (\Throwable $exception) {
@@ -97,6 +100,7 @@ class TechnicianTicketController extends Controller
         TicketPhoto::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'type' => 'PENYELESAIAN', 'storage_path' => $p, 'mime_type' => $f->getMimeType(), 'size_bytes' => $f->getSize(), 'uploaded_by' => $r->user()->id]);
         $ticket->update(['status' => TicketStatus::Completed]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::InProgress, 'new_status' => TicketStatus::Completed, 'changed_by' => $r->user()->id]);
+        AuditLogger::record('ticket.completed', "Menyelesaikan tiket #{$ticket->id}", $o, $r->user(), $ticket);
         try {
             OrganizationTicketsChanged::dispatch($o->id, 'updated');
         } catch (\Throwable $exception) {
