@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { AlertTriangle, ArrowLeft, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { ReactNode } from 'react';
 import ShapeGrid from '@/Components/ShapeGrid';
 import { Button } from '@/Components/ui/button';
@@ -9,7 +9,9 @@ export default function AuthSplitLayout({ title, eyebrow, description, children 
         <section className="relative hidden min-h-screen overflow-hidden bg-slate-50 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
             <ShapeGrid speed={0.2} squareSize={48} direction="diagonal" borderColor="rgba(124, 58, 237, 0.18)" hoverFillColor="rgba(124, 58, 237, 0.32)" shape="square" hoverTrailAmount={5} className="pointer-events-none absolute inset-0 z-0 opacity-55" />
             <div className="relative z-10 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2.5 text-slate-900"><span className="flex size-9 items-center justify-center rounded-lg bg-violet-700 text-white"><Wrench className="size-4" /></span><span className="text-lg font-extrabold">Fix<span className="text-violet-700">In</span></span></Link>
+                <Link href="/">
+                    <img src="/assets/FixIn.png" alt="FixIn Logo" className="h-10 w-auto object-contain drop-shadow-sm" />
+                </Link>
                 <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-violet-700"><ArrowLeft className="size-4" />Kembali</Link>
             </div>
             <div className="relative z-10 max-w-xl">
