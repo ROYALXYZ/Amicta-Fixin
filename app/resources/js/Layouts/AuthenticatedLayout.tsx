@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Building2, FileText, LayoutDashboard, LogOut, RefreshCw, User, UsersRound, Wrench } from 'lucide-react';
+import { Building2, FileText, History, LayoutDashboard, LogOut, RefreshCw, User, UsersRound, Wrench } from 'lucide-react';
+import NotificationCenter from '@/Components/NotificationCenter';
 import { PropsWithChildren, ReactNode } from 'react';
 import { useState } from 'react';
 import {
@@ -31,7 +32,10 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
             { name: 'admin.locations.index', label: 'Gedung & Unit', icon: Building2 },
             { name: 'admin.technicians.index', label: 'Manajemen Tukang', icon: UsersRound },
         ];
-        if (user.role === 'TECHNICIAN') return [{ name: 'technician.tickets.index', label: 'Pekerjaan Teknisi', icon: Wrench }];
+        if (user.role === 'TECHNICIAN') return [
+            { name: 'technician.tickets.index', label: 'Pekerjaan Teknisi', icon: Wrench },
+            { name: 'technician.history.index', label: 'Riwayat Pengerjaan', icon: History },
+        ];
         return [
             { name: 'resident.dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { name: 'resident.tickets.index', label: 'Laporan Saya', icon: FileText },
@@ -44,9 +48,7 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
             <Sidebar collapsible="icon">
                 <SidebarHeader>
                     <div className="flex h-12 items-center gap-3 px-2 py-2 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <img src="/assets/logo_tanpa_fixin.png" alt="Logo" className="size-5 object-contain" />
-                        </div>
+                        <img src="/assets/logo_tanpa_fixin.png" alt="Logo FixIn" className="size-8 shrink-0 object-contain group-data-[collapsible=icon]:ml-4" />
                         <div className="flex min-w-0 flex-col overflow-hidden transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                             <p className="truncate text-sm font-bold tracking-tight">FixIn</p>
                             <p className="truncate text-xs text-muted-foreground">{displayRole}</p>
@@ -97,6 +99,7 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
                 <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b bg-background px-4 sm:px-6">
                     <SidebarTrigger aria-label="Buka atau tutup navigasi" />
                     {header && <div className="min-w-0 flex-1 text-base font-semibold">{header}</div>}
+                    <NotificationCenter />
                     <button
                         type="button"
                         onClick={() => {

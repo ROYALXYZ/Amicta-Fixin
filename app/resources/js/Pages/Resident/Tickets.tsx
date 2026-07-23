@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/Com
 import { Button } from "@/Components/ui/button";
 import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
+import { Input } from "@/Components/ui/input";
+import { Textarea } from "@/Components/ui/textarea";
+import { Select as ShadSelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 import { toast } from 'sonner';
 
@@ -108,13 +111,13 @@ export default function Tickets({ tickets, buildings }: Props) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="issue-category">Jenis Masalah</Label>
-                                <input id="issue-category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.data.issue_category_name} onChange={(event) => form.setData('issue_category_name', event.target.value)} placeholder="Contoh: Pipa bocor, lampu mati, atau kunci pintu rusak" maxLength={120} required />
+                                <Input id="issue-category" value={form.data.issue_category_name} onChange={(event) => form.setData('issue_category_name', event.target.value)} placeholder="Contoh: Pipa bocor, lampu mati, atau kunci pintu rusak" maxLength={120} required />
                                 {form.errors.issue_category_name && <p className="text-[0.8rem] font-medium text-red-500">{form.errors.issue_category_name}</p>}
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Detail Kerusakan</label>
-                                <textarea className="flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none" placeholder="Ceritakan detail kerusakan yang Anda alami..." value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
+                                <Textarea placeholder="Ceritakan detail kerusakan yang Anda alami..." value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                                 {form.errors.description && <p className="text-[0.8rem] font-medium text-red-500">{form.errors.description}</p>}
                             </div>
 
@@ -202,14 +205,7 @@ function Select({ label, value, onChange, options, disabled = false }: { label: 
     return (
         <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{label}</label>
-            <div className="relative">
-                <select disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)}
-                    className="w-full h-11 appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-violet-400 disabled:opacity-50">
-                    <option value="">Pilih {label}</option>
-                    {options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                </select>
-                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">▼</div>
-            </div>
+            <ShadSelect disabled={disabled} value={value} onValueChange={onChange}><SelectTrigger className="h-11 rounded-xl bg-slate-50"><SelectValue placeholder={`Pilih ${label}`} /></SelectTrigger><SelectContent>{options.map(([id, name]) => <SelectItem key={id} value={String(id)}>{name}</SelectItem>)}</SelectContent></ShadSelect>
         </div>
     );
 }
@@ -222,5 +218,6 @@ function Status({ status }: { status: string }) {
         SELESAI: 'bg-emerald-100 text-emerald-700 border-emerald-200',
         DIBATALKAN: 'bg-slate-100 text-slate-600 border-slate-200'
     };
-    return <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold tracking-wide uppercase ${map[status]}`}>{status.replaceAll('_', ' ')}</span>;
+    const labels: Record<string, string> = { MENUNGGU_DISPATCH: 'Menunggu Dispatch', DITUGASKAN: 'Ditugaskan', DALAM_PENGERJAAN: 'Dalam Pengerjaan', SELESAI: 'Selesai', DIBATALKAN: 'Dibatalkan' };
+    return <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${map[status]}`}>{labels[status] ?? status}</span>;
 }

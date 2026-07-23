@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(calc(-100% - 1rem)); }
@@ -56,4 +57,9 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+}
+
+/* Dashboard surfaces stay visually stable; controls retain their own hover states. */
+@layer components {
+  tbody > tr:hover { background-color: transparent !important; }
 }

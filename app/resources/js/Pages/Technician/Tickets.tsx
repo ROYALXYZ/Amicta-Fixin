@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Textarea } from '@/Components/ui/textarea';
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 import { toast } from 'sonner';
 
@@ -18,17 +19,17 @@ const Building2Icon = ({ className = 'h-4 w-4' }: { className?: string }) => <sv
 const SearchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
-    if (name.includes('Listrik')) return <ZapIcon className={className || "text-amber-500"} />;
-    if (name.includes('AC')) return <WindIcon className={className || "text-blue-500"} />;
-    if (name.includes('Air')) return <DropletsIcon className={className || "text-cyan-500"} />;
-    return <Building2Icon className={className || "text-stone-500"} />;
+    if (name.includes('Listrik')) return <ZapIcon className={className || "text-primary"} />;
+    if (name.includes('AC')) return <WindIcon className={className || "text-primary"} />;
+    if (name.includes('Air')) return <DropletsIcon className={className || "text-primary"} />;
+    return <Building2Icon className={className || "text-primary"} />;
 }
 
 type WorkNote = { body: string; created_at: string | null };
 type TicketPhoto = { type: string; url: string; created_at: string | null };
 type TicketRowType = {
-    id: number; status: string; priority: string;
-    issue_category: { name: string }; building: { name: string }; unit: { number: string };
+    id: number; status: string; priority: string; is_urgent: boolean;
+    issue_category: { name: string }; building: { name: string }; unit: { number: string }; reporter?: { name: string; username?: string; phone_number?: string } | null;
     description: string;
     submitted_at: string | null; assigned_at: string | null; started_at: string | null; completed_at: string | null;
     photo_urls?: TicketPhoto[]; work_notes?: WorkNote[];
@@ -40,21 +41,28 @@ const fmt = (iso: string | null | undefined) => {
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 };
 
-export default function Tickets({ tickets }: { tickets: TicketRowType[] }) {
+export default function Tickets({ tickets, completedCount }: { tickets: TicketRowType[]; completedCount: number }) {
     useOrganizationRealtime('tickets.changed', ['tickets']);
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [urgencyFilter, setUrgencyFilter] = useState('ALL');
+    const [timeFilter, setTimeFilter] = useState('ALL');
+    const [expandedTicketId, setExpandedTicketId] = useState<number | null>(null);
+    const hasActiveFilters = query.trim() !== '' || statusFilter !== 'ALL' || urgencyFilter !== 'ALL' || timeFilter !== 'ALL';
 
     const filteredTickets = tickets.filter((ticket) => {
         const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
-        const haystack = `${ticket.id} ${ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.description}`.toLowerCase();
+        const matchesUrgency = urgencyFilter === 'ALL' || (urgencyFilter === 'URGENT' ? ticket.is_urgent : !ticket.is_urgent);
+        const age = ticket.submitted_at ? Date.now() - new Date(ticket.submitted_at).getTime() : Number.POSITIVE_INFINITY;
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        const submittedAt = ticket.submitted_at ? new Date(ticket.submitted_at).getTime() : 0;
+        const matchesTime = timeFilter === 'ALL' || (timeFilter === 'TODAY' ? submittedAt >= startOfToday : timeFilter === 'WEEK' ? age <= 7 * 86_400_000 : age <= 30 * 86_400_000);
+        const haystack = `${ticket.id} ${ticket.issue_category.name} ${ticket.building.name} ${ticket.unit.number} ${ticket.description} ${ticket.reporter?.name ?? ''} ${ticket.reporter?.username ?? ''} ${ticket.reporter?.phone_number ?? ''}`.toLowerCase();
         const matchesQuery = query.trim() === '' || haystack.includes(query.toLowerCase());
-        return matchesStatus && matchesQuery;
+        return matchesStatus && matchesUrgency && matchesTime && matchesQuery;
     });
 
     const active = filteredTickets.filter((t) => !['SELESAI', 'DIBATALKAN'].includes(t.status));
-    const history = filteredTickets.filter((t) => ['SELESAI', 'DIBATALKAN'].includes(t.status));
-    const [showHistory, setShowHistory] = useState(false);
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Teknisi</h2>}><Head title="Work Order" /><div className="mx-auto max-w-7xl p-6 lg:p-8 space-y-6">
         <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -77,31 +85,39 @@ export default function Tickets({ tickets }: { tickets: TicketRowType[] }) {
             <Card>
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                     <CardTitle className="text-sm font-medium text-slate-700">Diselesaikan</CardTitle>
-                    <div className="rounded-full bg-emerald-100 p-2.5"><CheckCircleIcon className="h-4 w-4 text-emerald-600" /></div>
+                     <div className="rounded-full bg-primary/10 p-2.5"><CheckCircleIcon className="h-4 w-4 text-primary" /></div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-3xl font-bold tracking-tight text-slate-950">{tickets.filter((t) => t.status === 'SELESAI').length}</div>
+                    <div className="text-3xl font-bold tracking-tight text-slate-950">{completedCount}</div>
                     <p className="mt-3 text-xs text-slate-500">Pekerjaan selesai</p>
                 </CardContent>
             </Card>
         </div>
 
-        <Card className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-500">Filter Status:</span>
+         <Card className="p-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+             <div className="flex flex-wrap items-center gap-2">
+                 <span className="text-sm font-medium text-slate-500">Filter Status:</span>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Pilih Status" />
                     </SelectTrigger>
                     <SelectContent>
-                        {[['ALL', 'Semua Status'], ['DITUGASKAN', 'Baru'], ['DALAM_PENGERJAAN', 'Proses'], ['SELESAI', 'Selesai']].map(([value, label]) => (
+                        {[['ALL', 'Semua Status'], ['DITUGASKAN', 'Baru'], ['DALAM_PENGERJAAN', 'Proses']].map(([value, label]) => (
                             <SelectItem key={value} value={value}>
                                 {label} {value === 'ALL' ? `(${tickets.length})` : `(${tickets.filter((t) => t.status === value).length})`}
                             </SelectItem>
                         ))}
                     </SelectContent>
-                </Select>
-            </div>
+                 </Select>
+                 <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
+                     <SelectTrigger className="w-[150px]" aria-label="Filter urgensi"><SelectValue placeholder="Semua Urgensi" /></SelectTrigger>
+                     <SelectContent><SelectItem value="ALL">Semua Urgensi</SelectItem><SelectItem value="URGENT">Urgent</SelectItem><SelectItem value="REGULAR">Reguler</SelectItem></SelectContent>
+                 </Select>
+                 <Select value={timeFilter} onValueChange={setTimeFilter}>
+                     <SelectTrigger className="w-[155px]" aria-label="Filter waktu masuk"><SelectValue placeholder="Semua Waktu" /></SelectTrigger>
+                     <SelectContent><SelectItem value="ALL">Semua Waktu</SelectItem><SelectItem value="TODAY">Masuk Hari Ini</SelectItem><SelectItem value="WEEK">7 Hari Terakhir</SelectItem><SelectItem value="MONTH">30 Hari Terakhir</SelectItem></SelectContent>
+                 </Select>
+             </div>
             <div className="relative w-full sm:w-64 ml-auto">
                 <SearchIcon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <Input type="text" placeholder="Cari gedung, unit, ID..." className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -109,30 +125,23 @@ export default function Tickets({ tickets }: { tickets: TicketRowType[] }) {
         </Card>
 
         {active.length > 0 ? (
-            <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {active.map((t) => <WorkCard key={t.id} ticket={t} />)}
+             <section className="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                 {active.map((t) => <WorkCard key={t.id} ticket={t} expanded={expandedTicketId === t.id} onToggle={() => setExpandedTicketId((id) => id === t.id ? null : t.id)} />)}
             </section>
         ) : (
             <Card className="py-16 text-center shadow-sm">
                 <CardContent>
                     <CheckCircleIcon className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-                    <p className="text-lg font-bold text-slate-900">Semua Tugas Selesai!</p>
-                    <p className="mt-1 text-sm text-slate-500">Tidak ada work order aktif saat ini.</p>
+                     <p className="text-lg font-bold text-slate-900">{hasActiveFilters ? 'Tidak Ada Tugas yang Cocok' : 'Semua Tugas Selesai!'}</p>
+                     <p className="mt-1 text-sm text-slate-500">{hasActiveFilters ? 'Coba ubah status, urgensi, waktu masuk, atau kata pencarian.' : 'Tidak ada work order aktif saat ini.'}</p>
                 </CardContent>
             </Card>
         )}
 
-        {history.length > 0 && <section>
-            <Button type="button" variant="outline" onClick={() => setShowHistory(!showHistory)} className="mb-4 gap-2">
-                <span className={`transition-transform ${showHistory ? 'rotate-90' : ''}`}>▶</span>
-                Riwayat Pengerjaan ({history.length})
-            </Button>
-            {showHistory && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{history.map((t) => <HistoryCard key={t.id} ticket={t} />)}</div>}
-        </section>}
     </div></AuthenticatedLayout>;
 }
 
-function WorkCard({ ticket }: { ticket: TicketRowType }) {
+function WorkCard({ ticket, expanded, onToggle }: { ticket: TicketRowType; expanded: boolean; onToggle: () => void }) {
     const note = useForm({ body: '' });
     const completion = useForm({ completion_photo: null as File | null, work_note: '' });
 
@@ -151,14 +160,34 @@ function WorkCard({ ticket }: { ticket: TicketRowType }) {
     const workNotes = ticket.work_notes ?? [];
     const damagePhotos = (ticket.photo_urls ?? []).filter((p) => p.type === 'KERUSAKAN');
 
-    return <Card className="flex flex-col">
-        <CardContent className="p-6 pb-4">
+    return <Card className="flex h-fit flex-col overflow-hidden self-start">
+        <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={`ticket-${ticket.id}-details`}
+            onClick={onToggle}
+            className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+        >
+            <div className="flex min-w-0 items-center gap-3">
+                <div className="min-w-0">
+                    <p className="truncate text-base font-bold text-slate-900">Unit {ticket.unit.number}</p>
+                    <p className="truncate text-xs font-medium text-slate-500">{ticket.building.name} · {ticket.issue_category.name} · #{ticket.id}</p>
+                    <p className="truncate text-xs text-slate-400">Pelapor: {ticket.reporter?.name ?? 'Pelapor urgent'}</p>
+                </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+                {ticket.priority === 'TINGGI' && <Badge variant="outline" className={`text-[10px] tracking-wider ${priorityColor}`}>Prioritas Tinggi</Badge>}
+                <svg viewBox="0 0 24 24" className={`size-5 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </div>
+        </button>
+
+        {expanded && <div id={`ticket-${ticket.id}-details`}>
+        <CardContent className="border-t border-slate-100 p-6 pb-4">
             <div className="mb-3 flex justify-between items-start">
                 <div>
                     <p className="text-3xl font-black text-slate-900 tracking-tight">{ticket.unit.number}</p>
                     <p className="text-sm font-semibold text-slate-500 mt-1">{ticket.building.name}</p>
                 </div>
-                {ticket.priority === 'TINGGI' && <Badge variant="outline" className={`text-[10px] tracking-wider ${priorityColor}`}>Prioritas Tinggi</Badge>}
             </div>
 
             <div className="flex items-center gap-2 mb-2">
@@ -188,7 +217,7 @@ function WorkCard({ ticket }: { ticket: TicketRowType }) {
         {ticket.status === 'DITUGASKAN' && <form onSubmit={(e) => { e.preventDefault(); note.post(route('technician.tickets.start', ticket.id), { onSuccess: () => toast.success('Pengerjaan dimulai.'), onError: () => toast.error('Gagal memulai pengerjaan.') }); }}><Button disabled={note.processing} className="w-full">Mulai Pengerjaan</Button></form>}
         {ticket.status === 'DALAM_PENGERJAAN' && <div className="space-y-4">
             <form onSubmit={(event) => { event.preventDefault(); note.post(route('technician.tickets.note', ticket.id), { onSuccess: () => { note.reset(); completion.setData('work_note', ''); toast.success('Pesan berhasil ditambahkan.'); }, onError: () => toast.error('Pesan gagal ditambahkan.') }); }}>
-                <textarea aria-label="Catatan pekerjaan" required rows={2} className="flex min-h-[60px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition" placeholder="Tambahkan progress..." value={note.data.body} onChange={(event) => { note.setData('body', event.target.value); completion.setData('work_note', event.target.value); }} />
+                <Textarea aria-label="Catatan pekerjaan" required rows={2} placeholder="Tambahkan progress..." value={note.data.body} onChange={(event) => { note.setData('body', event.target.value); completion.setData('work_note', event.target.value); }} />
                 {note.hasErrors && <p className="mt-1 text-xs font-medium text-red-500">{note.errors.body}</p>}
                 <Button variant="outline" size="sm" disabled={note.processing} className="mt-2 w-full">Simpan Catatan</Button>
             </form>
@@ -203,34 +232,7 @@ function WorkCard({ ticket }: { ticket: TicketRowType }) {
             </form>
         </div>}
         </div>
-    </Card>;
-}
-
-function HistoryCard({ ticket }: { ticket: TicketRowType }) {
-    const completionPhotos = (ticket.photo_urls ?? []).filter((p) => p.type === 'PENYELESAIAN');
-    const workNotes = ticket.work_notes ?? [];
-
-    return <Card className="opacity-90 hover:opacity-100 transition-opacity">
-        <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-2xl font-black text-slate-900">{ticket.unit.number}</p>
-                <Status status={ticket.status} />
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-                <CategoryIcon name={ticket.issue_category.name} className="h-4 w-4 text-slate-500" />
-                <p className="font-semibold text-slate-900 text-sm">{ticket.issue_category.name}</p>
-            </div>
-            <p className="text-xs font-medium text-slate-500 mb-2">{ticket.building.name} • <span className="font-mono text-[10px]">#{ticket.id}</span></p>
-            <p className="line-clamp-2 text-xs text-slate-500 mb-3">{ticket.description}</p>
-
-            <div className="mt-auto space-y-1 text-[11px] text-slate-500">
-                {ticket.started_at && <p>Mulai: {fmt(ticket.started_at)}</p>}
-                {ticket.completed_at && <p className="font-semibold text-emerald-600">Selesai: {fmt(ticket.completed_at)}</p>}
-            </div>
-
-            {workNotes.length > 0 && <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">{workNotes.map((n, i) => <div key={i} className="rounded-md bg-slate-50 p-2 text-[11px] border border-slate-100"><p className="text-slate-600 font-medium">{n.body}</p></div>)}</div>}
-            {completionPhotos.length > 0 && <div className="mt-3"><div className="flex gap-2">{completionPhotos.map((p) => <a href={p.url} target="_blank" rel="noreferrer" key={p.url}><img src={p.url} alt="Bukti" className="h-12 w-12 rounded-md border border-slate-200 object-cover" /></a>)}</div></div>}
-        </CardContent>
+        </div>}
     </Card>;
 }
 
@@ -240,7 +242,8 @@ function Status({ status }: { status: string }) {
         DITUGASKAN: 'bg-blue-100 text-blue-900 border-blue-300',
         DALAM_PENGERJAAN: 'bg-violet-100 text-violet-900 border-violet-300',
         SELESAI: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-        DIBATALKAN: 'bg-slate-100 text-slate-900 border-slate-300'
+         DIBATALKAN: 'bg-red-50 text-red-700 border-red-200'
     };
-    return <Badge variant="outline" className={`text-[10px] tracking-widest ${map[status]}`}>{status.replaceAll('_', ' ')}</Badge>;
+    const labels: Record<string, string> = { MENUNGGU_DISPATCH: 'Menunggu Dispatch', DITUGASKAN: 'Ditugaskan', DALAM_PENGERJAAN: 'Dalam Pengerjaan', SELESAI: 'Selesai', DIBATALKAN: 'Dibatalkan' };
+    return <Badge variant="outline" className={`text-[10px] font-semibold ${map[status]}`}>{labels[status] ?? status}</Badge>;
 }

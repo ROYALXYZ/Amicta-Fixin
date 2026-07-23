@@ -12,10 +12,12 @@ use App\Models\TicketStatusHistory;
 use App\Models\Unit;
 use App\Jobs\SendReportTelegramNotification;
 use App\Support\AuditLogger;
+use App\Support\TicketNotifier;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ResidentTicketController extends Controller
@@ -40,7 +42,20 @@ class ResidentTicketController extends Controller
                 'unit:id,number',
                 'issueCategory:id,name',
                 'statusHistories' => fn ($query) => $query->with('changedBy:id,name')->oldest(),
-            ])->latest()->paginate($perPage)->withQueryString(),
+                'photos:id,ticket_id,type,storage_path,mime_type,created_at',
+                'workNotes:id,ticket_id,technician_id,body,created_at',
+            ])->latest()->paginate($perPage)->withQueryString()->through(function (Ticket $ticket) {
+                $ticket->setAttribute('photo_urls', $ticket->photos->map(fn ($photo) => [
+                    'type' => $photo->type->value,
+                    'created_at' => $photo->created_at?->toIso8601String(),
+                    'url' => Storage::disk('supabase')->temporaryUrl($photo->storage_path, now()->addMinutes(10)),
+                ])->values());
+                $ticket->setAttribute('work_notes', $ticket->workNotes->map(fn ($note) => [
+                    'body' => $note->body,
+                    'created_at' => $note->created_at?->toIso8601String(),
+                ])->values());
+                return $ticket;
+            }),
         ]);
     }
 
@@ -89,6 +104,7 @@ class ResidentTicketController extends Controller
         abort_unless($ticket instanceof Ticket, 500);
         /** @var Ticket $ticket */
         AuditLogger::record('ticket.created', "Membuat laporan #{$ticket->id}", $org, $request->user(), $ticket, ['status' => $ticket->status?->value]);
+        TicketNotifier::newReport($ticket, $org);
         SendReportTelegramNotification::dispatch($ticket->id)->afterCommit();
 
         Cache::forget("admin:{$org->id}:tickets:1");
