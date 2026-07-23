@@ -110,7 +110,8 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                         />
                     </div>
                     <div className="relative z-20 max-w-7xl mx-auto px-6 py-16 lg:py-12 grid lg:grid-cols-2 gap-12 items-center w-full">
-                         <div>
+                         <div className="relative">
+                            <div className="absolute -z-10 -top-20 -left-20 w-72 h-72 rounded-full bg-primary/30 blur-[100px] opacity-60 mix-blend-multiply" />
                             <div className="inline-flex items-center gap-2 bg-violet-100 border border-violet-200 rounded-full px-3 py-1 text-[11px] font-semibold text-violet-700 mb-5">
                                 <WrenchIcon className="h-3 w-3" /> Platform Operasional Gedung
                             </div>
@@ -121,7 +122,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                                 Tinggalkan tumpukan kertas dan grup obrolan yang berantakan. FixIn hadir sebagai platform terpadu yang menyinkronkan penghuni, manajemen, dan teknisi. Laporan kerusakan diselesaikan lebih cepat dengan pelacakan status yang transparan dan terukur.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Link href={route('dashboard')} className="flex items-center justify-center gap-2 bg-violet-700 text-white font-semibold px-6 py-3 rounded-xl hover:bg-violet-800 transition-colors text-sm">Lapor Sekarang <ArrowRightIcon className="h-4 w-4" /></Link>
+                                <Link href={route('dashboard')} className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-all duration-300 shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] hover:-translate-y-1 text-sm">Lapor Sekarang <ArrowRightIcon className="h-4 w-4" /></Link>
                             </div>
                             <div className="flex items-center gap-4 mt-8 pt-6">
                                 <div className="text-xs">
@@ -137,7 +138,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                         </div>
 
                          <div className="hidden lg:block">
-                            <div className="bg-white/95 border border-slate-200 rounded-2xl p-5 shadow-xl shadow-slate-900/10">
+                            <div className="relative bg-white/95 border border-primary/10 rounded-2xl p-5 shadow-[0_10px_40px_rgba(139,92,246,0.08)] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_15px_50px_rgba(139,92,246,0.12)]">
                                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                                     <div><p className="text-slate-900 font-bold text-sm">Cara Kerja FixIn</p><p className="text-slate-500 text-[11px] mt-0.5">Visibilitas real-time</p></div>
                                 </div>

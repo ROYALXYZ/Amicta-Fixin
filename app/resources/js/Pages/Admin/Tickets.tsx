@@ -105,10 +105,10 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
     const submitBulkCancel = () => { bulkCancel.setData('ticket_ids', selectedIds); bulkCancel.post(route('admin.tickets.bulk-cancel'), { onSuccess: () => { setSelectedIds([]); setBulkAction(null); toast.success(`${selectedIds.length} tiket berhasil dibatalkan.`); }, onError: () => toast.error('Pembatalan gagal. Tidak ada perubahan disimpan.') }); };
 
     const statCards = [
-        { label: 'Total Tiket', value: tickets.total, note: 'Seluruh laporan organisasi', icon: <FileTextIcon className="h-4 w-4 text-slate-500" /> },
-        { label: 'Urgent', value: urgentCount, note: urgentCount ? 'Perlu perhatian segera' : 'Tidak ada antrean urgent', icon: <ZapIcon className="h-4 w-4 text-rose-600" />, urgent: true },
-        { label: 'Menunggu Dispatch', value: stat('MENUNGGU_DISPATCH'), note: 'Siap ditugaskan ke teknisi', icon: <ClockIcon className="h-4 w-4 text-slate-500" /> },
-        { label: 'Sedang Diproses', value: stat('DALAM_PENGERJAAN') + stat('DITUGASKAN'), note: `${stat('SELESAI')} tiket selesai`, icon: <WrenchIcon className="h-4 w-4 text-slate-500" /> },
+        { label: 'Total Tiket', value: tickets.total, note: 'Seluruh laporan organisasi', icon: <div className="rounded-full bg-slate-100 p-2.5"><FileTextIcon className="h-4 w-4 text-slate-600" /></div> },
+        { label: 'Urgent', value: urgentCount, note: urgentCount ? 'Perlu perhatian segera' : 'Tidak ada antrean urgent', icon: <div className="rounded-full bg-rose-100 p-2.5"><ZapIcon className="h-4 w-4 text-rose-600" /></div>, urgent: true },
+        { label: 'Menunggu Dispatch', value: stat('MENUNGGU_DISPATCH'), note: 'Siap ditugaskan ke teknisi', icon: <div className="rounded-full bg-amber-100 p-2.5"><ClockIcon className="h-4 w-4 text-amber-600" /></div> },
+        { label: 'Sedang Diproses', value: stat('DALAM_PENGERJAAN') + stat('DITUGASKAN'), note: `${stat('SELESAI')} tiket selesai`, icon: <div className="rounded-full bg-primary/10 p-2.5"><WrenchIcon className="h-4 w-4 text-primary" /></div> },
     ];
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Admin</h2>}><Head title="Admin" />
@@ -143,8 +143,8 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                 <CardHeader><CardTitle>Distribusi Status Laporan</CardTitle><CardDescription>{urgentOnly ? 'Komposisi tiket urgent yang sedang ditampilkan.' : query || statusFilter !== 'ALL' ? 'Komposisi tiket sesuai filter aktif.' : 'Komposisi seluruh tiket organisasi.'}</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     {[
-                        ['Menunggu dispatch', 'MENUNGGU_DISPATCH', 'bg-amber-500'], ['Ditugaskan', 'DITUGASKAN', 'bg-blue-500'], ['Dalam pengerjaan', 'DALAM_PENGERJAAN', 'bg-violet-500'], ['Selesai', 'SELESAI', 'bg-emerald-500'], ['Dibatalkan', 'DIBATALKAN', 'bg-slate-400'],
-                    ].map(([label, status, color]) => { const value = stat(status); const percentage = tickets.total ? Math.round(value / tickets.total * 100) : 0; return <div key={status} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm"><span>{label}</span><div className="h-3 overflow-hidden rounded-full bg-muted"><div className={`${color} h-full rounded-full`} style={{ width: `${percentage}%` }} /></div><span className="text-right font-medium">{value}</span></div>; })}
+                        ['Menunggu dispatch', 'MENUNGGU_DISPATCH'], ['Ditugaskan', 'DITUGASKAN'], ['Dalam pengerjaan', 'DALAM_PENGERJAAN'], ['Selesai', 'SELESAI'], ['Dibatalkan', 'DIBATALKAN'],
+                    ].map(([label, status]) => { const value = stat(status); const percentage = tickets.total ? Math.round(value / tickets.total * 100) : 0; return <div key={status} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm"><span>{label}</span><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-primary to-purple-400 transition-all duration-1000 ease-out" style={{ width: `${percentage}%` }} /></div><span className="text-right font-medium">{value}</span></div>; })}
                 </CardContent>
             </Card>
 
@@ -175,13 +175,13 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                     <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
-                                 {['', 'Tiket', 'Masalah', 'Lokasi', 'Dilaporkan', 'Teknisi', 'Status', 'Aksi'].map(h => <TableHead key={h} className="h-12 whitespace-nowrap px-5 text-xs font-semibold text-slate-500">{h}</TableHead>)}
+                            <TableRow className="bg-primary/5 hover:bg-primary/5">
+                                 {['', 'Tiket', 'Masalah', 'Lokasi', 'Dilaporkan', 'Teknisi', 'Status', 'Aksi'].map(h => <TableHead key={h} className="h-12 whitespace-nowrap px-5 text-xs font-bold uppercase tracking-wider text-primary">{h}</TableHead>)}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredTickets.map(ticket => (
-                                <TableRow key={ticket.id} className="h-16 border-slate-100 hover:bg-slate-50/70">
+                                <TableRow key={ticket.id} className="h-16 border-slate-100 transition-colors duration-200 hover:bg-primary/5">
                                      <TableCell className="px-5"><input type="checkbox" aria-label={`Pilih tiket #${ticket.id}`} checked={selectedIds.includes(ticket.id)} onChange={() => toggleTicket(ticket.id)} className="size-4 rounded border-slate-300" /></TableCell><TableCell className="whitespace-nowrap px-5 align-middle font-mono text-xs font-semibold text-slate-700"><div className="flex flex-wrap items-center gap-1.5"> <span>#{ticket.id}</span>{ticket.is_urgent && <Badge className="h-5 border-rose-200 bg-rose-100 px-1.5 text-[9px] text-rose-700 hover:bg-rose-100">URGENT</Badge>}{ticket.priority === 'TINGGI' && <Badge className="h-5 border-amber-200 bg-amber-100 px-1.5 text-[9px] text-amber-800 hover:bg-amber-100">TINGGI</Badge>}</div></TableCell>
                                     <TableCell className="max-w-[20rem] px-5"><div className="flex items-start gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="mt-0.5 h-4 w-4 shrink-0" /><div className="min-w-0"><p className="truncate font-medium text-slate-800">{ticket.custom_issue_category ?? ticket.issue_category.name}</p><p className="truncate text-xs text-slate-500">{ticket.description}</p></div></div></TableCell>
                                     <TableCell className="whitespace-nowrap px-5 text-slate-700"><p>{ticket.building.name}</p><p className="text-xs text-slate-500">Unit {ticket.unit.number}</p></TableCell>
@@ -191,7 +191,7 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                                     <TableCell className="px-5"><Button variant="outline" size="sm" disabled={loadingTicket === ticket.id} onClick={() => openTicket(ticket.id)}>{loadingTicket === ticket.id ? 'Memuat...' : 'Buka'}</Button></TableCell>
                                 </TableRow>
                             ))}
-                             {filteredTickets.length === 0 && <TableRow><TableCell colSpan={8} className="h-36 text-center text-slate-500">Tidak ada tiket ditemukan</TableCell></TableRow>}
+                             {filteredTickets.length === 0 && <TableRow><TableCell colSpan={8} className="h-48 text-center"><div className="flex flex-col items-center justify-center space-y-3"><div className="rounded-full bg-primary/10 p-3"><FileTextIcon className="h-6 w-6 text-primary" /></div><p className="text-sm font-medium text-slate-900">Belum ada tiket ditemukan</p><p className="text-xs text-slate-500">Coba sesuaikan filter atau kata kunci pencarian Anda.</p></div></TableCell></TableRow>}
                         </TableBody>
                     </Table>
                     </div>
@@ -271,5 +271,5 @@ function Status({ status }: { status: string }) {
         SELESAI: 'bg-emerald-100 text-emerald-900 border-emerald-200',
         DIBATALKAN: 'bg-slate-100 text-slate-700 border-slate-200'
     };
-    return <Badge variant="outline" className={map[status]}>{status.replaceAll('_', ' ')}</Badge>;
+    return <Badge variant="outline" className={`rounded-full ${map[status]}`}>{status.replaceAll('_', ' ')}</Badge>;
 }
