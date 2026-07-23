@@ -38,23 +38,24 @@ export default function Organizations({
     };
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Organisasi
-                </h2>
-            }
-        >
-            <Head title="Organisasi" />
+        <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Platform</h2>}>
+            <Head title="Manajemen Organisasi" />
 
-            <div className="py-12">
-                <div className="mx-auto grid max-w-7xl gap-6 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:px-8">
-                    <section className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                        <div className="border-b border-gray-200 p-6">
+            <div className="mx-auto max-w-7xl p-6 lg:p-8 space-y-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Manajemen Organisasi</h1>
+                        <p className="text-slate-500">Kelola tenant dan administrator utama platform.</p>
+                    </div>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+                    <section className="overflow-hidden bg-white shadow-sm sm:rounded-xl border border-slate-200">
+                        <div className="border-b border-gray-200 bg-slate-50/50 p-6">
                             <h3 className="text-lg font-semibold text-gray-900">
                                 Tenant terdaftar
                             </h3>
-                            <p className="mt-1 text-sm text-gray-600">
+                            <p className="mt-1 text-sm text-gray-500">
                                 Subdomain dibuat dari slug organisasi.
                             </p>
                         </div>
@@ -85,11 +86,11 @@ export default function Organizations({
                         </div>
                     </section>
 
-                    <section className="bg-white p-6 shadow-sm sm:rounded-lg">
+                    <section className="bg-white p-6 shadow-sm sm:rounded-xl border border-slate-200">
                         <h3 className="text-lg font-semibold text-gray-900">
                             Tenant baru
                         </h3>
-                        <p className="mt-1 text-sm text-gray-600">
+                        <p className="mt-1 text-sm text-gray-500">
                             Buat organisasi dan Admin pertamanya sekaligus.
                         </p>
 
