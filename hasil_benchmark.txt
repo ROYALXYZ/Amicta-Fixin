@@ -1,0 +1,90 @@
+[Navigation benchmark:start] 
+Object { from: "/login", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/login", to: "/login", durationMs: 1879, networkMs: 1745, serverMs: 211, dbMs: 61, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/technicians", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/technicians", to: "/admin/tickets", durationMs: 475, networkMs: 440, serverMs: 167, dbMs: 43, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 383, networkMs: 372, serverMs: 133, dbMs: 34, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/technicians", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/technicians", to: "/admin/tickets", durationMs: 421, networkMs: 406, serverMs: 150, dbMs: 46, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 450, networkMs: 440, serverMs: 166, dbMs: 56, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/technicians", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/technicians", to: "/admin/tickets", durationMs: 486, networkMs: 373, serverMs: 122, dbMs: 18, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 476, networkMs: 465, serverMs: 150, dbMs: 52, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/technicians", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/technicians", to: "/admin/tickets", durationMs: 396, networkMs: 383, serverMs: 127, dbMs: 23, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 380, networkMs: 368, serverMs: 121, dbMs: 19, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/technicians", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/technicians", to: "/admin/tickets", durationMs: 376, networkMs: 361, serverMs: 126, dbMs: 29, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 440, networkMs: 368, serverMs: 121, dbMs: 19, completed: false, interrupted: true, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/tickets", durationMs: 598, networkMs: 577, serverMs: 192, dbMs: 45, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 393, networkMs: 381, serverMs: 135, dbMs: 38, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/technicians", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/technicians", to: "/admin/tickets", durationMs: 479, networkMs: 467, serverMs: 159, dbMs: 49, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944
+[Navigation benchmark:start] 
+Object { from: "/admin/tickets", to: URL }
+app--m9It81I.js:92:82617
+[Navigation benchmark] 
+Object { from: "/admin/tickets", to: "/admin/technicians", durationMs: 574, networkMs: 446, serverMs: 125, dbMs: 25, completed: true, interrupted: false, cancelled: false }
+app--m9It81I.js:92:82944

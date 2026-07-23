@@ -28,7 +28,7 @@ class SendReportTelegramNotification implements ShouldQueue
             "LAPORAN BARU #{$ticket->id}",
             "Organisasi: {$ticket->organization->name}",
             "Lokasi: {$ticket->building->name} / {$ticket->unit->number}",
-            'Kategori: '.($ticket->custom_issue_category ?: $ticket->issueCategory?->name ?: 'Lainnya'),
+            'Jenis Masalah: '.($ticket->custom_issue_category ?: $ticket->issueCategory?->name ?: 'Lainnya'),
             'Status: '.($ticket->status?->value ?? $ticket->status),
             "Pelapor: {$reporter}",
             'Waktu: '.$ticket->created_at->timezone(config('telegram.timezone'))->format('d M Y H:i'),
