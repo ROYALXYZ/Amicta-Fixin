@@ -23,7 +23,7 @@ export default {
     	extend: {
     		fontFamily: {
     			sans: [
-    				'Figtree',
+    				'Inter',
                     ...defaultTheme.fontFamily.sans
                 ]
     		},
