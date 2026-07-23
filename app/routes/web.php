@@ -8,12 +8,20 @@ use App\Http\Controllers\ResidentTicketController;
 use App\Http\Controllers\TechnicianTicketController;
 use App\Http\Controllers\UrgentTicketController;
 use App\Http\Controllers\TelegramAuditController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+Route::pattern('organization', '[0-9]+');
+Route::pattern('building', '[0-9]+');
+Route::pattern('unit', '[0-9]+');
+Route::pattern('technician', '[0-9]+');
+Route::pattern('ticket', '[0-9]+');
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
+        'ownerMode' => ! request()->attributes->get('organization'),
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
@@ -34,6 +42,11 @@ Route::post('/integrations/telegram/audit/webhook', [TelegramAuditController::cl
     ->middleware(\App\Http\Middleware\VerifyTelegramWebhookSecret::class);
 
 Route::middleware(['auth', 'tenant.user'])->group(function () {
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+});
+
+Route::middleware(['auth', 'tenant.user'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -47,6 +60,7 @@ Route::middleware(['auth', 'tenant.user', 'role:RESIDENT'])->prefix('resident')-
 
 Route::middleware(['auth', 'tenant.user', 'role:TECHNICIAN'])->prefix('technician')->name('technician.')->group(function () {
     Route::get('/tickets', [TechnicianTicketController::class, 'index'])->name('tickets.index');
+    Route::get('/history', [TechnicianTicketController::class, 'history'])->name('history.index');
     Route::post('/tickets/{ticket}/start', [TechnicianTicketController::class, 'start'])->name('tickets.start');
     Route::post('/tickets/{ticket}/notes', [TechnicianTicketController::class, 'note'])->name('tickets.note');
     Route::post('/tickets/{ticket}/complete', [TechnicianTicketController::class, 'complete'])->name('tickets.complete');
@@ -65,6 +79,7 @@ Route::middleware(['auth', 'tenant.user', 'role:ADMIN'])->prefix('admin')->name(
     Route::patch('/buildings/{building}/toggle', [AdminTicketController::class, 'toggleBuilding'])->name('buildings.toggle');
     Route::patch('/units/{unit}', [AdminTicketController::class, 'updateUnit'])->name('units.update');
     Route::patch('/units/{unit}/toggle', [AdminTicketController::class, 'toggleUnit'])->name('units.toggle');
+    Route::post('/units/bulk-toggle', [AdminTicketController::class, 'bulkToggleUnits'])->name('units.bulk-toggle');
     Route::post('/technicians', [AdminTechnicianController::class, 'store'])->name('technicians.store');
     Route::patch('/technicians/{technician}', [AdminTechnicianController::class, 'update'])->name('technicians.update');
     Route::patch('/technicians/{technician}/toggle', [AdminTechnicianController::class, 'toggle'])->name('technicians.toggle');
@@ -81,6 +96,10 @@ Route::middleware(['auth', 'tenant.user', 'role:PLATFORM_OWNER'])
             ->name('organizations.index');
         Route::post('/organizations', [PlatformOrganizationController::class, 'store'])
             ->name('organizations.store');
+        Route::patch('/organizations/{organization}', [PlatformOrganizationController::class, 'update'])
+            ->name('organizations.update');
+        Route::patch('/organizations/{organization}/toggle', [PlatformOrganizationController::class, 'toggle'])
+            ->name('organizations.toggle');
     });
 
 require __DIR__.'/auth.php';

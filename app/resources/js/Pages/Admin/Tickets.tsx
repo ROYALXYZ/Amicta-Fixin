@@ -28,25 +28,26 @@ import {
     SelectValue,
 } from '@/Components/ui/select';
 import { Label } from '@/Components/ui/label';
+import { Checkbox } from '@/Components/ui/checkbox';
 import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 import { toast } from 'sonner';
+import { CircleAlert, TriangleAlert, Zap } from 'lucide-react';
 
 const FileTextIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ClockIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
 const CheckCircleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" /><path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const PlusIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const ZapIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const WindIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const DropletsIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M7 16.3c0 2.59 2.24 4.7 5 4.7s5-2.11 5-4.7c0-2.59-5-9.3-5-9.3s-5 6.71-5 9.3z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const Building2Icon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M4 21h16M10 21v-4a2 2 0 0 1 4 0v4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const SearchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
-    if (name.includes('Listrik')) return <ZapIcon className={className || 'text-amber-500'} />;
-    if (name.includes('AC')) return <WindIcon className={className || 'text-blue-500'} />;
-    if (name.includes('Air')) return <DropletsIcon className={className || 'text-cyan-500'} />;
-    return <Building2Icon className={className || 'text-stone-500'} />;
+    if (name.includes('Listrik')) return <Zap className={className || 'text-primary'} />;
+    if (name.includes('AC')) return <WindIcon className={className || 'text-primary'} />;
+    if (name.includes('Air')) return <DropletsIcon className={className || 'text-primary'} />;
+    return <Building2Icon className={className || 'text-primary'} />;
 }
 
 function formatTicketAge(iso: string | null) {
@@ -68,13 +69,16 @@ type TicketRowType = {
     photo_urls?: TicketPhoto[]; work_notes?: WorkNote[];
 };
 type TicketPage = { data: TicketRowType[]; current_page: number; last_page: number; per_page: number; total: number };
+const statusLabels: Record<string, string> = { ALL: 'Semua Status', MENUNGGU_DISPATCH: 'Menunggu Dispatch', DITUGASKAN: 'Ditugaskan', DALAM_PENGERJAAN: 'Dalam Pengerjaan', SELESAI: 'Selesai', DIBATALKAN: 'Dibatalkan' };
 
 export default function Tickets({ tickets, statusCounts, urgentCount, technicians }: { tickets: TicketPage; statusCounts: Record<string, number>; urgentCount: number; technicians: { id: number; name: string }[] }) {
     useOrganizationRealtime('tickets.changed', ['tickets', 'statusCounts', 'technicians']);
     const params = new URLSearchParams(window.location.search);
     const [query, setQuery] = useState(params.get('query') ?? '');
     const [statusFilter, setStatusFilter] = useState(params.get('status') ?? 'ALL');
-    const [urgentOnly, setUrgentOnly] = useState(params.get('urgent') === '1');
+    const [urgentFilter, setUrgentFilter] = useState(params.get('urgent') === '1' ? 'URGENT' : params.get('urgent') === '0' ? 'REGULAR' : 'ALL');
+    const urgentOnly = urgentFilter === 'URGENT';
+    const urgentQuery = urgentFilter === 'URGENT' ? 1 : urgentFilter === 'REGULAR' ? 0 : undefined;
     const [selectedTicket, setSelectedTicket] = useState<TicketRowType | null>(null);
     const [loadingTicket, setLoadingTicket] = useState<number | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -91,10 +95,10 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
         }
 
         const timer = window.setTimeout(() => {
-            router.get(route('admin.tickets.index'), { page: 1, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined, per_page: tickets.per_page }, { preserveState: true, preserveScroll: true, replace: true });
+            router.get(route('admin.tickets.index'), { page: 1, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentQuery, per_page: tickets.per_page }, { preserveState: true, preserveScroll: true, replace: true });
         }, 250);
         return () => window.clearTimeout(timer);
-    }, [query, statusFilter, urgentOnly]);
+    }, [query, statusFilter, urgentFilter]);
 
     const filteredTickets = tickets.data;
     const pageIds = filteredTickets.map((ticket) => ticket.id);
@@ -105,9 +109,9 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
     const submitBulkCancel = () => { bulkCancel.setData('ticket_ids', selectedIds); bulkCancel.post(route('admin.tickets.bulk-cancel'), { onSuccess: () => { setSelectedIds([]); setBulkAction(null); toast.success(`${selectedIds.length} tiket berhasil dibatalkan.`); }, onError: () => toast.error('Pembatalan gagal. Tidak ada perubahan disimpan.') }); };
 
     const statCards = [
-        { label: 'Total Tiket', value: tickets.total, note: 'Seluruh laporan organisasi', icon: <div className="rounded-full bg-slate-100 p-2.5"><FileTextIcon className="h-4 w-4 text-slate-600" /></div> },
-        { label: 'Urgent', value: urgentCount, note: urgentCount ? 'Perlu perhatian segera' : 'Tidak ada antrean urgent', icon: <div className="rounded-full bg-rose-100 p-2.5"><ZapIcon className="h-4 w-4 text-rose-600" /></div>, urgent: true },
-        { label: 'Menunggu Dispatch', value: stat('MENUNGGU_DISPATCH'), note: 'Siap ditugaskan ke teknisi', icon: <div className="rounded-full bg-amber-100 p-2.5"><ClockIcon className="h-4 w-4 text-amber-600" /></div> },
+        { label: 'Total Tiket', value: tickets.total, note: 'Seluruh laporan organisasi', icon: <div className="rounded-full bg-primary/10 p-2.5"><FileTextIcon className="h-4 w-4 text-primary" /></div> },
+        { label: 'Urgent', value: urgentCount, note: urgentCount ? 'Perlu perhatian segera' : 'Tidak ada antrean urgent', icon: <div className="rounded-full bg-primary/10 p-2.5"><CircleAlert className="h-4 w-4 text-primary" /></div>, urgent: true },
+        { label: 'Menunggu Dispatch', value: stat('MENUNGGU_DISPATCH'), note: 'Siap ditugaskan ke teknisi', icon: <div className="rounded-full bg-primary/10 p-2.5"><ClockIcon className="h-4 w-4 text-primary" /></div> },
         { label: 'Sedang Diproses', value: stat('DALAM_PENGERJAAN') + stat('DITUGASKAN'), note: `${stat('SELESAI')} tiket selesai`, icon: <div className="rounded-full bg-primary/10 p-2.5"><WrenchIcon className="h-4 w-4 text-primary" /></div> },
     ];
 
@@ -119,7 +123,7 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                     <p className="text-slate-500">Pantau antrean, assignment teknisi, dan status penyelesaian.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    {urgentCount > 0 && <Button variant="outline" className={urgentOnly ? 'gap-2 border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'gap-2 border-rose-200 text-rose-700 hover:bg-rose-50'} onClick={() => { setUrgentOnly((value) => !value); setStatusFilter('ALL'); }}><ZapIcon className="h-4 w-4" /> {urgentOnly ? 'Tampilkan semua tiket' : `Lihat ${urgentCount} tiket urgent`}</Button>}
+                    {urgentCount > 0 && <Button variant="outline" className={urgentOnly ? 'gap-2 border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'gap-2 border-rose-200 text-rose-700 hover:bg-rose-50'} onClick={() => { setUrgentFilter(urgentOnly ? 'ALL' : 'URGENT'); setStatusFilter('ALL'); }}><CircleAlert className="h-4 w-4" /> {urgentOnly ? 'Tampilkan semua tiket' : `Lihat ${urgentCount} tiket urgent`}</Button>}
                     <Button asChild variant="outline" className="gap-2"><Link href={route('admin.technicians.index')}><PlusIcon className="h-4 w-4" /> Kelola Teknisi</Link></Button>
                 </div>
             </div>
@@ -140,18 +144,18 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
             </div>
 
             <Card className={urgentCount > 0 ? 'border-rose-200 bg-rose-50/40' : undefined}>
-                <CardHeader><CardTitle>Distribusi Status Laporan</CardTitle><CardDescription>{urgentOnly ? 'Komposisi tiket urgent yang sedang ditampilkan.' : query || statusFilter !== 'ALL' ? 'Komposisi tiket sesuai filter aktif.' : 'Komposisi seluruh tiket organisasi.'}</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Distribusi Status Laporan</CardTitle><CardDescription>{urgentOnly ? 'Komposisi tiket urgent yang sedang ditampilkan.' : query || statusFilter !== 'ALL' || urgentFilter !== 'ALL' ? 'Komposisi tiket sesuai filter aktif.' : 'Komposisi seluruh tiket organisasi.'}</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     {[
                         ['Menunggu dispatch', 'MENUNGGU_DISPATCH'], ['Ditugaskan', 'DITUGASKAN'], ['Dalam pengerjaan', 'DALAM_PENGERJAAN'], ['Selesai', 'SELESAI'], ['Dibatalkan', 'DIBATALKAN'],
-                    ].map(([label, status]) => { const value = stat(status); const percentage = tickets.total ? Math.round(value / tickets.total * 100) : 0; return <div key={status} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm"><span>{label}</span><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-primary to-purple-400 transition-all duration-1000 ease-out" style={{ width: `${percentage}%` }} /></div><span className="text-right font-medium">{value}</span></div>; })}
+                    ].map(([label, status]) => { const value = stat(status); const percentage = tickets.total ? Math.round(value / tickets.total * 100) : 0; const barColor = { MENUNGGU_DISPATCH: 'bg-amber-400', DITUGASKAN: 'bg-blue-500', DALAM_PENGERJAAN: 'bg-violet-500', SELESAI: 'bg-emerald-500', DIBATALKAN: 'bg-red-500' }[status] ?? 'bg-primary'; return <div key={status} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm"><span>{label}</span><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${barColor}`} style={{ width: `${percentage}%` }} /></div><span className="text-right font-medium">{value}</span></div>; })}
                 </CardContent>
             </Card>
 
             <Card className="overflow-hidden">
                 <CardHeader className="flex flex-col gap-4 border-b bg-slate-50/50 px-5 py-5 md:flex-row md:items-center md:justify-between lg:px-6">
-                     <div className="flex items-center gap-2">
-                         <input type="checkbox" aria-label="Pilih semua tiket di halaman" checked={allPageSelected} onChange={togglePage} className="size-4 rounded border-slate-300" />
+                     <div className="flex flex-wrap items-center gap-2">
+<Checkbox aria-label="Pilih semua tiket di halaman" checked={allPageSelected} onCheckedChange={togglePage} />
                         <span className="text-sm font-medium text-slate-500">Filter Status:</span>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                             <SelectTrigger className="w-[200px]">
@@ -160,11 +164,21 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                             <SelectContent>
                                 {(['ALL', 'MENUNGGU_DISPATCH', 'DITUGASKAN', 'DALAM_PENGERJAAN', 'SELESAI', 'DIBATALKAN']).map(s => (
                                     <SelectItem key={s} value={s}>
-                                        {s === 'ALL' ? 'Semua Status' : s.replaceAll('_', ' ')}
+                                         {statusLabels[s]}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
-                        </Select>
+                         </Select>
+                         <Select value={urgentFilter} onValueChange={setUrgentFilter}>
+                             <SelectTrigger className="w-[160px]" aria-label="Filter urgensi">
+                                 <SelectValue placeholder="Semua Urgensi" />
+                             </SelectTrigger>
+                             <SelectContent>
+                                 <SelectItem value="ALL">Semua Urgensi</SelectItem>
+                                 <SelectItem value="URGENT">Urgent</SelectItem>
+                                 <SelectItem value="REGULAR">Reguler</SelectItem>
+                             </SelectContent>
+                         </Select>
                     </div>
                     <div className="relative w-full md:w-72">
                         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -175,14 +189,14 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                     <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-primary/5 hover:bg-primary/5">
+                            <TableRow className="bg-primary/5">
                                  {['', 'Tiket', 'Masalah', 'Lokasi', 'Dilaporkan', 'Teknisi', 'Status', 'Aksi'].map(h => <TableHead key={h} className="h-12 whitespace-nowrap px-5 text-xs font-bold uppercase tracking-wider text-primary">{h}</TableHead>)}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredTickets.map(ticket => (
-                                <TableRow key={ticket.id} className="h-16 border-slate-100 transition-colors duration-200 hover:bg-primary/5">
-                                     <TableCell className="px-5"><input type="checkbox" aria-label={`Pilih tiket #${ticket.id}`} checked={selectedIds.includes(ticket.id)} onChange={() => toggleTicket(ticket.id)} className="size-4 rounded border-slate-300" /></TableCell><TableCell className="whitespace-nowrap px-5 align-middle font-mono text-xs font-semibold text-slate-700"><div className="flex flex-wrap items-center gap-1.5"> <span>#{ticket.id}</span>{ticket.is_urgent && <Badge className="h-5 border-rose-200 bg-rose-100 px-1.5 text-[9px] text-rose-700 hover:bg-rose-100">URGENT</Badge>}{ticket.priority === 'TINGGI' && <Badge className="h-5 border-amber-200 bg-amber-100 px-1.5 text-[9px] text-amber-800 hover:bg-amber-100">TINGGI</Badge>}</div></TableCell>
+                                 <TableRow key={ticket.id} className="h-16 border-slate-100">
+                                       <TableCell className="px-5"><Checkbox aria-label={`Pilih tiket #${ticket.id}`} checked={selectedIds.includes(ticket.id)} onCheckedChange={() => toggleTicket(ticket.id)} /></TableCell><TableCell className="whitespace-nowrap px-5 align-middle font-mono text-xs font-semibold text-slate-700"><div className="flex flex-wrap items-center gap-1.5"> <span>#{ticket.id}</span>{ticket.is_urgent && <span title="Tiket urgent" className="inline-flex size-5 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-700"><CircleAlert className="size-3" aria-hidden="true" /><span className="sr-only">Urgent</span></span>}{!ticket.is_urgent && ticket.priority === 'TINGGI' && <span title="Prioritas tinggi" className="inline-flex size-5 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-800"><TriangleAlert className="size-3" aria-hidden="true" /><span className="sr-only">Prioritas tinggi</span></span>}</div></TableCell>
                                     <TableCell className="max-w-[20rem] px-5"><div className="flex items-start gap-2"><CategoryIcon name={ticket.custom_issue_category ?? ticket.issue_category.name} className="mt-0.5 h-4 w-4 shrink-0" /><div className="min-w-0"><p className="truncate font-medium text-slate-800">{ticket.custom_issue_category ?? ticket.issue_category.name}</p><p className="truncate text-xs text-slate-500">{ticket.description}</p></div></div></TableCell>
                                     <TableCell className="whitespace-nowrap px-5 text-slate-700"><p>{ticket.building.name}</p><p className="text-xs text-slate-500">Unit {ticket.unit.number}</p></TableCell>
                                     <TableCell className="whitespace-nowrap px-5 text-xs text-slate-500">{formatTicketAge(ticket.submitted_at)}</TableCell>
@@ -196,7 +210,7 @@ export default function Tickets({ tickets, statusCounts, urgentCount, technician
                     </Table>
                     </div>
                      {selectedIds.length > 0 && <div className="flex flex-wrap items-center gap-2 border-b bg-violet-50 px-5 py-3 text-sm"><span className="mr-auto font-medium text-violet-900">{selectedIds.length} tiket dipilih</span><Button size="sm" onClick={() => setBulkAction('dispatch')}>Tugaskan Teknisi</Button><Button size="sm" variant="outline" className="border-red-200 text-red-600" onClick={() => setBulkAction('cancel')}>Batalkan</Button><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Bersihkan</Button></div>}
-                     <div className="flex flex-wrap items-center justify-between gap-4 border-t bg-slate-50/50 px-5 py-4 text-sm lg:px-6"><span className="text-muted-foreground">{tickets.total} tiket</span><div className="flex flex-wrap items-center gap-2"><span className="mr-1 text-xs text-muted-foreground">Tampilkan</span>{[5, 10, 15, 20].map((size) => <Link key={size} href={route('admin.tickets.index', { per_page: size, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined })} className={`inline-flex size-9 items-center justify-center rounded-md border text-xs font-medium ${tickets.per_page === size ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>{size}</Link>)}{tickets.last_page > 1 && <><Button asChild variant="outline" size="icon" className="ml-1 size-9" disabled={tickets.current_page === 1}><Link aria-label="Halaman sebelumnya" href={route('admin.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined })}>←</Link></Button><Button asChild variant="outline" size="icon" className="size-9" disabled={tickets.current_page === tickets.last_page}><Link aria-label="Halaman berikutnya" href={route('admin.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentOnly ? 1 : undefined })}>→</Link></Button></>}</div></div>
+                     <div className="flex flex-wrap items-center justify-between gap-4 border-t bg-slate-50/50 px-5 py-4 text-sm lg:px-6"><span className="text-muted-foreground">{tickets.total} tiket</span><div className="flex flex-wrap items-center gap-2"><span className="mr-1 text-xs text-muted-foreground">Tampilkan</span>{[5, 10, 15, 20].map((size) => <Link key={size} href={route('admin.tickets.index', { per_page: size, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentQuery })} className={`inline-flex size-9 items-center justify-center rounded-md border text-xs font-medium ${tickets.per_page === size ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>{size}</Link>)}{tickets.last_page > 1 && <><Button asChild variant="outline" size="icon" className="ml-1 size-9" disabled={tickets.current_page === 1}><Link aria-label="Halaman sebelumnya" href={route('admin.tickets.index', { page: tickets.current_page - 1, per_page: tickets.per_page, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentQuery })}>←</Link></Button><Button asChild variant="outline" size="icon" className="size-9" disabled={tickets.current_page === tickets.last_page}><Link aria-label="Halaman berikutnya" href={route('admin.tickets.index', { page: tickets.current_page + 1, per_page: tickets.per_page, query: query || undefined, status: statusFilter === 'ALL' ? undefined : statusFilter, urgent: urgentQuery })}>→</Link></Button></>}</div></div>
                 </CardContent>
             </Card>
 
@@ -229,7 +243,7 @@ function TicketDetail({ ticket, technicians, onClose }: { ticket: TicketRowType;
 
     return <div className="space-y-6">
         <DialogHeader>
-            <div className="flex items-center gap-3"><Badge variant="outline">#{ticket.id}</Badge>{ticket.is_urgent && <Badge className="border-rose-200 bg-rose-100 text-rose-700 hover:bg-rose-100"><ZapIcon className="mr-1 h-3 w-3" />URGENT</Badge>}<Status status={ticket.status} /></div>
+             <div className="flex items-center gap-3"><Badge variant="outline">#{ticket.id}</Badge>{ticket.is_urgent && <Badge variant="outline" className="rounded-full border-red-200 bg-red-50 text-red-700"><CircleAlert className="mr-1 h-3 w-3" aria-hidden="true" />URGENT</Badge>}<Status status={ticket.status} /></div>
             <DialogTitle>Detail Tiket</DialogTitle>
             <DialogDescription>Kelola penugasan dan pantau progres work order.</DialogDescription>
         </DialogHeader>
@@ -269,7 +283,7 @@ function Status({ status }: { status: string }) {
         DITUGASKAN: 'bg-blue-100 text-blue-900 border-blue-200',
         DALAM_PENGERJAAN: 'bg-violet-100 text-violet-900 border-violet-200',
         SELESAI: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-        DIBATALKAN: 'bg-slate-100 text-slate-700 border-slate-200'
+        DIBATALKAN: 'bg-red-50 text-red-700 border-red-200'
     };
-    return <Badge variant="outline" className={`rounded-full ${map[status]}`}>{status.replaceAll('_', ' ')}</Badge>;
+    return <Badge variant="outline" className={`rounded-full ${map[status]}`}>{statusLabels[status] ?? status}</Badge>;
 }

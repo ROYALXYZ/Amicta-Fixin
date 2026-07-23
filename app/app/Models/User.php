@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\DatabaseNotification;
 
 class User extends Authenticatable
 {
@@ -70,5 +71,10 @@ class User extends Authenticatable
     public function assignedTickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'technician_id');
+    }
+
+    public function notificationRecords()
+    {
+        return $this->morphMany(DatabaseNotification::class, 'notifiable');
     }
 }

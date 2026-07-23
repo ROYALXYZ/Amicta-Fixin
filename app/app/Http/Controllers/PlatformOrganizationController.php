@@ -46,4 +46,23 @@ class PlatformOrganizationController extends Controller
         return to_route('platform.organizations.index')
             ->with('success', 'Organisasi dan Admin pertama berhasil dibuat.');
     }
+
+    public function update(Request $request, Organization $organization): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'slug' => ['required', 'string', 'max:63', 'regex:/^[a-z0-9-]+$/', Rule::unique('organizations', 'slug')->ignore($organization)],
+        ]);
+
+        $organization->update($data);
+
+        return to_route('platform.organizations.index')->with('success', 'Organisasi berhasil diperbarui.');
+    }
+
+    public function toggle(Organization $organization): RedirectResponse
+    {
+        $organization->update(['is_active' => ! $organization->is_active]);
+
+        return to_route('platform.organizations.index')->with('success', $organization->is_active ? 'Organisasi berhasil diaktifkan.' : 'Organisasi berhasil dinonaktifkan.');
+    }
 }

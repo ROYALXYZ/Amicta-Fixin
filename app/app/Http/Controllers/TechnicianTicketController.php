@@ -10,6 +10,7 @@ use App\Models\TicketStatusHistory;
 use App\Models\TicketWorkNote;
 use App\Support\AuditLogger;
 use App\Support\TenantContext;
+use App\Support\TicketNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -19,11 +20,32 @@ class TechnicianTicketController extends Controller
     public function index(Request $r)
     {
         $o = TenantContext::organization($r);
+        $query = Ticket::where('organization_id', $o->id)->where('technician_id', $r->user()->id);
+        $completedCount = (clone $query)->where('status', TicketStatus::Completed)->count();
+        $tickets = $query->whereIn('status', [TicketStatus::Assigned, TicketStatus::InProgress])->with(['building:id,name', 'unit:id,number', 'reporter:id,name,username,phone_number', 'issueCategory:id,name', 'photos:id,ticket_id,type,storage_path,mime_type,created_at', 'workNotes:id,ticket_id,technician_id,body,created_at', 'statusHistories:id,ticket_id,new_status,created_at'])->latest()->get();
+        $this->hydrateTickets($tickets);
 
-        $tickets = Ticket::where('organization_id', $o->id)->where('technician_id', $r->user()->id)->with(['building:id,name', 'unit:id,number', 'issueCategory:id,name', 'photos:id,ticket_id,type,storage_path,mime_type,created_at', 'workNotes:id,ticket_id,technician_id,body,created_at', 'statusHistories:id,ticket_id,new_status,created_at'])->latest()->get();
+        return Inertia::render('Technician/Tickets', ['tickets' => $tickets, 'completedCount' => $completedCount]);
+    }
+
+    public function history(Request $r)
+    {
+        $o = TenantContext::organization($r);
+        $tickets = Ticket::where('organization_id', $o->id)->where('technician_id', $r->user()->id)
+            ->whereIn('status', [TicketStatus::Completed, TicketStatus::Cancelled])
+            ->with(['building:id,name', 'unit:id,number', 'reporter:id,name,username,phone_number', 'issueCategory:id,name', 'photos:id,ticket_id,type,storage_path,mime_type,created_at', 'workNotes:id,ticket_id,technician_id,body,created_at', 'statusHistories:id,ticket_id,new_status,created_at'])
+            ->latest()->get();
+        $this->hydrateTickets($tickets);
+
+        return Inertia::render('Technician/History', ['tickets' => $tickets]);
+    }
+
+    private function hydrateTickets($tickets): void
+    {
         $tickets->each(function (Ticket $ticket): void {
             $history = fn (TicketStatus $status) => $ticket->statusHistories->firstWhere('new_status', $status);
             $ticket->setAttribute('submitted_at', $ticket->created_at?->toIso8601String());
+            $ticket->setAttribute('is_urgent', $ticket->reporter_id === null);
             $ticket->setAttribute('assigned_at', $history(TicketStatus::Assigned)?->created_at?->toIso8601String());
             $ticket->setAttribute('started_at', $history(TicketStatus::InProgress)?->created_at?->toIso8601String());
             $ticket->setAttribute('completed_at', $history(TicketStatus::Completed)?->created_at?->toIso8601String());
@@ -37,8 +59,6 @@ class TechnicianTicketController extends Controller
                 'created_at' => $note->created_at?->toIso8601String(),
             ])->values()->all());
         });
-
-        return Inertia::render('Technician/Tickets', ['tickets' => $tickets]);
     }
 
     public function start(Request $r, Ticket $ticket)
@@ -48,6 +68,7 @@ class TechnicianTicketController extends Controller
         $ticket->update(['status' => TicketStatus::InProgress]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::Assigned, 'new_status' => TicketStatus::InProgress, 'changed_by' => $r->user()->id]);
         AuditLogger::record('ticket.started', "Memulai tiket #{$ticket->id}", $o, $r->user(), $ticket);
+        TicketNotifier::statusChanged($ticket, 'Teknisi mulai mengerjakan laporan.', $o);
         try {
             OrganizationTicketsChanged::dispatch($o->id, 'updated');
         } catch (\Throwable $exception) {
@@ -101,6 +122,7 @@ class TechnicianTicketController extends Controller
         $ticket->update(['status' => TicketStatus::Completed]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::InProgress, 'new_status' => TicketStatus::Completed, 'changed_by' => $r->user()->id]);
         AuditLogger::record('ticket.completed', "Menyelesaikan tiket #{$ticket->id}", $o, $r->user(), $ticket);
+        TicketNotifier::statusChanged($ticket, 'Laporan sudah diselesaikan oleh teknisi.', $o);
         try {
             OrganizationTicketsChanged::dispatch($o->id, 'updated');
         } catch (\Throwable $exception) {

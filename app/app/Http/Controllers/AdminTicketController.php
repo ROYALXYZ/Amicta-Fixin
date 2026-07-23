@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\TicketStatusHistory;
 use App\Models\Unit;
 use App\Support\AuditLogger;
+use App\Support\TicketNotifier;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use App\Support\TenantContext;
@@ -29,35 +30,40 @@ class AdminTicketController extends Controller
         $perPage = in_array($request->integer('per_page'), [5, 10, 15, 20], true) ? $request->integer('per_page') : 5;
         $status = $request->string('status')->toString();
         $query = trim($request->string('query')->toString());
-        $urgent = $request->boolean('urgent');
+        $urgent = $request->string('urgent')->toString();
         $filteredQuery = $this->filteredTicketsQuery($org->id, $status, $query, $urgent);
         $tickets = (clone $filteredQuery)
-            ->with(['building:id,name', 'unit:id,number', 'reporter:id,name', 'technician:id,name', 'issueCategory:id,name'])
+            ->with(['building:id,name', 'unit:id,number', 'reporter:id,name,username,phone_number', 'technician:id,name,username,phone_number', 'issueCategory:id,name'])
             ->latest()->paginate($perPage)->withQueryString()->through(fn (Ticket $ticket) => [
                 'id' => $ticket->id, 'status' => $ticket->status->value, 'issue_category' => $ticket->issueCategory, 'custom_issue_category' => $ticket->custom_issue_category,
                 'building' => $ticket->building, 'unit' => $ticket->unit, 'reporter' => $ticket->reporter, 'reporter_name' => $ticket->reporter_name, 'reporter_phone' => $ticket->reporter_phone,
                 'technician' => $ticket->technician, 'priority' => $ticket->priority?->value, 'is_urgent' => $ticket->reporter_id === null, 'submitted_at' => $ticket->created_at?->toIso8601String(),
             ]);
         $statusCounts = (clone $filteredQuery)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
-        $urgentCount = Ticket::where('organization_id', $org->id)->whereNull('reporter_id')->count();
+        $urgentCount = Ticket::where('organization_id', $org->id)
+            ->whereNull('reporter_id')
+            ->whereNotIn('status', [TicketStatus::Completed->value, TicketStatus::Cancelled->value])
+            ->count();
 
         return Inertia::render('Admin/Tickets', ['tickets' => $tickets, 'statusCounts' => $statusCounts, 'urgentCount' => $urgentCount, 'technicians' => Cache::remember("admin:{$org->id}:active-technicians", now()->addMinute(), fn () => User::where('organization_id', $org->id)->where('role', UserRole::Technician)->where('is_active', true)->get(['id', 'name']))]);
     }
 
-    private function filteredTicketsQuery(int $organizationId, string $status, string $query, bool $urgent)
+    private function filteredTicketsQuery(int $organizationId, string $status, string $query, string $urgent)
     {
         return Ticket::where('organization_id', $organizationId)
             ->when(in_array($status, array_column(TicketStatus::cases(), 'value'), true), fn ($builder) => $builder->where('status', $status))
-            ->when($urgent, fn ($builder) => $builder->whereNull('reporter_id'))
+            ->when($urgent === '1', fn ($builder) => $builder->whereNull('reporter_id')->whereNotIn('status', [TicketStatus::Completed->value, TicketStatus::Cancelled->value]))
+            ->when($urgent === '0', fn ($builder) => $builder->whereNotNull('reporter_id'))
             ->when($query !== '', fn ($builder) => $builder->where(function ($builder) use ($query) {
                 $builder->where('id', 'like', "%{$query}%")
                     ->orWhere('description', 'like', "%{$query}%")
                     ->orWhere('reporter_name', 'like', "%{$query}%")
                     ->orWhere('reporter_phone', 'like', "%{$query}%")
+                    ->orWhereHas('reporter', fn ($reporter) => $reporter->where('name', 'like', "%{$query}%")->orWhere('username', 'like', "%{$query}%")->orWhere('phone_number', 'like', "%{$query}%"))
                     ->orWhereHas('building', fn ($building) => $building->where('name', 'like', "%{$query}%"))
                     ->orWhereHas('unit', fn ($unit) => $unit->where('number', 'like', "%{$query}%"))
                     ->orWhereHas('issueCategory', fn ($category) => $category->where('name', 'like', "%{$query}%"))
-                    ->orWhereHas('technician', fn ($technician) => $technician->where('name', 'like', "%{$query}%"));
+                    ->orWhereHas('technician', fn ($technician) => $technician->where('name', 'like', "%{$query}%")->orWhere('username', 'like', "%{$query}%")->orWhere('phone_number', 'like', "%{$query}%"));
             }));
     }
 
@@ -127,10 +133,13 @@ class AdminTicketController extends Controller
         $o = TenantContext::organization($r);
         abort_unless($building->organization_id === $o->id, 404);
         $active = ! $building->is_active;
-        $building->update(['is_active' => $active]);
-        if (! $active) $building->units()->update(['is_active' => false]);
-        AuditLogger::record('building.'.($active ? 'activated' : 'deactivated'), "Mengubah status gedung {$building->name}", $o, $r->user(), $building, ['is_active' => $active]);
-        return back();
+        $unitCount = $building->units()->count();
+        DB::transaction(function () use ($building, $active): void {
+            $building->update(['is_active' => $active]);
+            $building->units()->update(['is_active' => $active]);
+        });
+        AuditLogger::record('building.'.($active ? 'activated' : 'deactivated'), "Mengubah status gedung {$building->name}", $o, $r->user(), $building, ['is_active' => $active, 'unit_count' => $unitCount]);
+        return $r->expectsJson() ? response()->json(['is_active' => $active]) : back();
     }
 
     public function updateUnit(Request $r, Unit $unit)
@@ -150,7 +159,17 @@ class AdminTicketController extends Controller
         abort_unless($unit->organization_id === $o->id, 404);
         $unit->update(['is_active' => ! $unit->is_active]);
         AuditLogger::record('unit.'.($unit->is_active ? 'activated' : 'deactivated'), "Mengubah status unit {$unit->number}", $o, $r->user(), $unit, ['is_active' => $unit->is_active]);
-        return back();
+        return $r->expectsJson() ? response()->json(['is_active' => $unit->is_active]) : back();
+    }
+
+    public function bulkToggleUnits(Request $r)
+    {
+        $o = TenantContext::organization($r);
+        $d = $r->validate(['unit_ids' => ['required', 'array', 'min:1'], 'unit_ids.*' => ['integer'], 'is_active' => ['required', 'boolean']]);
+        $units = Unit::where('organization_id', $o->id)->whereIn('id', $d['unit_ids'])->get();
+        abort_if($units->count() !== count(array_unique($d['unit_ids'])), 404);
+        Unit::whereIn('id', $units->pluck('id'))->update(['is_active' => $d['is_active']]);
+        return $r->expectsJson() ? response()->json(['is_active' => $d['is_active']]) : back();
     }
 
     public function technician(Request $r)
@@ -173,6 +192,7 @@ class AdminTicketController extends Controller
         $ticket->update(['technician_id' => $u->id, 'priority' => $d['priority'], 'status' => TicketStatus::Assigned]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
         AuditLogger::record('ticket.assigned', "Menugaskan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['technician_id' => $u->id, 'priority' => $d['priority']]);
+        TicketNotifier::assigned($ticket, $u, $ticket->reporter);
 
         $this->forgetTicketCache($o->id);
         try {
@@ -192,6 +212,7 @@ class AdminTicketController extends Controller
         $ticket->update(['status' => TicketStatus::Cancelled, 'cancellation_reason' => $d['reason'], 'cancelled_by' => $r->user()->id, 'cancelled_at' => now()]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => $old, 'new_status' => TicketStatus::Cancelled, 'changed_by' => $r->user()->id, 'note' => $d['reason']]);
         AuditLogger::record('ticket.cancelled', "Membatalkan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['reason' => $d['reason']]);
+        TicketNotifier::statusChanged($ticket, 'Laporan dibatalkan oleh admin.', $o);
 
         $this->forgetTicketCache($o->id);
         try {
@@ -221,6 +242,7 @@ class AdminTicketController extends Controller
                 AuditLogger::record($wasAssigned ? 'ticket.reassigned' : 'ticket.assigned', $wasAssigned ? "Mengganti teknisi tiket #{$ticket->id}" : "Menugaskan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['old_technician_id' => $oldTechnicianId, 'technician_id' => $technician->id, 'priority' => $d['priority']], false);
             }
             AuditLogger::record('ticket.bulk_assigned', 'Melakukan penugasan massal tiket', $o, $r->user(), null, ['ticket_ids' => $tickets->pluck('id')->values()->all(), 'technician_id' => $technician->id, 'priority' => $d['priority']]);
+            $tickets->each(fn (Ticket $ticket) => TicketNotifier::assigned($ticket, $technician, $ticket->reporter));
         });
         $this->forgetTicketCache($o->id);
         OrganizationTicketsChanged::dispatch($o->id, 'updated');
@@ -242,6 +264,7 @@ class AdminTicketController extends Controller
                 AuditLogger::record('ticket.cancelled', "Membatalkan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['reason' => $d['reason']], false);
             }
             AuditLogger::record('ticket.bulk_cancelled', 'Melakukan pembatalan massal tiket', $o, $r->user(), null, ['ticket_ids' => $tickets->pluck('id')->values()->all(), 'reason' => $d['reason']]);
+            $tickets->each(fn (Ticket $ticket) => TicketNotifier::statusChanged($ticket, 'Laporan dibatalkan oleh admin.', $o));
         });
         $this->forgetTicketCache($o->id);
         OrganizationTicketsChanged::dispatch($o->id, 'updated');

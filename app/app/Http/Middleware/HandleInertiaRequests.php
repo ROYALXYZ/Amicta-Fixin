@@ -36,6 +36,18 @@ class HandleInertiaRequests extends Middleware
             ],
             'baseDomain' => strtolower(trim((string) config('tenancy.base_domain'), '.')),
             'organization' => fn () => $request->attributes->get('organization'),
+            'notifications' => fn () => $request->user() ? [
+                'unreadCount' => $request->user()->unreadNotifications()->count(),
+                'items' => $request->user()->notifications()->latest()->limit(8)->get()->map(fn ($notification) => [
+                    'id' => $notification->id,
+                    'title' => $notification->data['title'] ?? 'Notifikasi',
+                    'message' => $notification->data['message'] ?? '',
+                    'event' => $notification->data['event'] ?? null,
+                    'ticket_id' => $notification->data['ticket_id'] ?? null,
+                    'read_at' => $notification->read_at?->toIso8601String(),
+                    'created_at' => $notification->created_at?->toIso8601String(),
+                ])->values(),
+            ] : ['unreadCount' => 0, 'items' => []],
         ];
     }
 }

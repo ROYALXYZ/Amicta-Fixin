@@ -3,8 +3,11 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { FormEventHandler, useState } from 'react';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 
 type Organization = {
     id: number;
@@ -28,6 +31,8 @@ export default function Organizations({
         admin_password: '',
         admin_password_confirmation: '',
     });
+    const [editing, setEditing] = useState<Organization | null>(null);
+    const edit = useForm({ name: '', slug: '' });
 
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
@@ -35,6 +40,12 @@ export default function Organizations({
         post(route('platform.organizations.store'), {
             onSuccess: () => reset(),
         });
+    };
+
+    const openEdit = (organization: Organization) => {
+        setEditing(organization);
+        edit.setData({ name: organization.name, slug: organization.slug });
+        edit.clearErrors();
     };
 
     return (
@@ -73,13 +84,18 @@ export default function Organizations({
                                             {organization.slug}.{usePage().props.baseDomain as string}
                                         </p>
                                     </div>
-                                    <div className="text-right text-sm text-gray-600">
+                                    <div className="flex items-end gap-4 text-right text-sm text-gray-600">
+                                        <div className="flex gap-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => openEdit(organization)}>Edit</Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => router.patch(route('platform.organizations.toggle', organization.id), {}, { preserveScroll: true })}>{organization.is_active ? 'Nonaktifkan' : 'Aktifkan'}</Button>
+                                        </div>
+                                        <div>
                                         <p>{organization.users_count} akun</p>
-                                        <p>
+                                        <p className={organization.is_active ? 'text-emerald-600' : 'text-red-600'}>
                                             {organization.is_active
                                                 ? 'Aktif'
                                                 : 'Nonaktif'}
-                                        </p>
+                                        </p></div>
                                     </div>
                                 </div>
                             ))}
@@ -230,6 +246,16 @@ export default function Organizations({
                         </form>
                     </section>
                 </div>
+                <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+                    <DialogContent>
+                        <DialogHeader><DialogTitle>Edit organisasi</DialogTitle></DialogHeader>
+                        <form onSubmit={(event) => { event.preventDefault(); if (!editing) return; edit.patch(route('platform.organizations.update', editing.id), { preserveScroll: true, onSuccess: () => setEditing(null) }); }} className="space-y-4">
+                            <div><InputLabel htmlFor="edit_name" value="Nama organisasi" /><Input id="edit_name" className="mt-1" value={edit.data.name} onChange={(event) => edit.setData('name', event.target.value)} required /><InputError className="mt-2" message={edit.errors.name} /></div>
+                            <div><InputLabel htmlFor="edit_slug" value="Slug subdomain" /><Input id="edit_slug" className="mt-1" value={edit.data.slug} onChange={(event) => edit.setData('slug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} required /><InputError className="mt-2" message={edit.errors.slug} /></div>
+                            <DialogFooter><Button type="button" variant="outline" onClick={() => setEditing(null)}>Batal</Button><Button disabled={edit.processing}>{edit.processing ? 'Menyimpan...' : 'Simpan perubahan'}</Button></DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AuthenticatedLayout>
     );

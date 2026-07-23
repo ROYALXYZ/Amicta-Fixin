@@ -49,7 +49,9 @@ function TestimonialCard({ name, role, body }: (typeof testimonials)[number]) {
 }
 
 
-export default function Welcome({ auth }: PageProps<{ laravelVersion: string; phpVersion: string }>) {
+const adminWhatsApp = 'https://wa.me/62895365331035?text=Hallo%20kak%20kami%20ingin%20mendaftarkan%20gedung%20ke%20FixIn';
+
+export default function Welcome({ auth, ownerMode = false }: PageProps<{ laravelVersion: string; phpVersion: string; ownerMode?: boolean }>) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const navItems = [
         { name: 'Fitur', link: '#features' },
@@ -77,7 +79,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                         <NavbarLogo />
                         <NavItems items={navItems} />
                         <div className="flex items-center gap-3">
-                            {auth.user ? <NavbarButton as={Link} href={route('dashboard')}>Dashboard</NavbarButton> : <>
+                             {ownerMode ? <NavbarButton as="a" href={adminWhatsApp} target="_blank">Daftarkan Gedung</NavbarButton> : auth.user ? <NavbarButton as={Link} href={route('dashboard')}>Dashboard</NavbarButton> : <>
                                 <NavbarButton as={Link} href={route('urgent.create')} variant="dark" className="!bg-red-600 hover:!bg-red-700 !border-none !text-white flex items-center gap-1.5"><AlertTriangle className="h-4 w-4" /> Emergency</NavbarButton>
                             </>}
                         </div>
@@ -89,7 +91,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                         </MobileNavHeader>
                         <MobileNavMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)}>
                             {navItems.map((item) => <a key={item.link} href={item.link} onClick={(event) => { const target = document.getElementById(item.link.slice(1)); if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.history.pushState(null, '', item.link); } setIsMobileMenuOpen(false); }} className="text-neutral-600"><span>{item.name}</span></a>)}
-                            {auth.user ? <NavbarButton as={Link} href={route('dashboard')} onClick={() => setIsMobileMenuOpen(false)} className="w-full">Dashboard</NavbarButton> : <>
+                             {ownerMode ? <NavbarButton as="a" href={adminWhatsApp} target="_blank" onClick={() => setIsMobileMenuOpen(false)} className="w-full">Daftarkan Gedung</NavbarButton> : auth.user ? <NavbarButton as={Link} href={route('dashboard')} onClick={() => setIsMobileMenuOpen(false)} className="w-full">Dashboard</NavbarButton> : <>
                                 <NavbarButton as={Link} href={route('urgent.create')} onClick={() => setIsMobileMenuOpen(false)} variant="dark" className="w-full !bg-red-600 hover:!bg-red-700 !border-none !text-white flex items-center justify-center gap-1.5"><AlertTriangle className="h-4 w-4" /> Emergency</NavbarButton>
                             </>}
                         </MobileNavMenu>
@@ -122,7 +124,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                                 Tinggalkan tumpukan kertas dan grup obrolan yang berantakan. FixIn hadir sebagai platform terpadu yang menyinkronkan penghuni, manajemen, dan teknisi. Laporan kerusakan diselesaikan lebih cepat dengan pelacakan status yang transparan dan terukur.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Link href={route('dashboard')} className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-all duration-300 shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] hover:-translate-y-1 text-sm">Lapor Sekarang <ArrowRightIcon className="h-4 w-4" /></Link>
+                                 {ownerMode ? <a href={adminWhatsApp} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-all duration-300 shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] hover:-translate-y-1 text-sm">Daftarkan Gedung <ArrowRightIcon className="h-4 w-4" /></a> : <Link href={route('dashboard')} className="flex items-center justify-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-all duration-300 shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] hover:-translate-y-1 text-sm">Lapor Sekarang <ArrowRightIcon className="h-4 w-4" /></Link>}
                             </div>
                             <div className="flex items-center gap-4 mt-8 pt-6">
                                 <div className="text-xs">
@@ -177,7 +179,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                     </div>
                 </section>
 
-                <section id="features" className="scroll-mt-20">
+                <section id="features" className="flex min-h-[100svh] scroll-mt-20 items-center bg-[#FBFAFF] py-24 lg:py-20">
                     <FeatureGrid>
                          <div data-aos="fade-up" className="text-center mb-6">
                             <div className="inline-flex items-center gap-1.5 bg-violet-50 border border-violet-100 rounded-full px-3 py-1 text-[11px] font-semibold text-violet-700 mb-3">
@@ -222,7 +224,9 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                             <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Siap merapikan operasional gedung Anda?</h2>
                             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-violet-100 sm:text-lg">Tinggalkan pencatatan manual. Beralih ke sistem tiket yang transparan untuk penghuni, admin, dan teknisi.</p>
                             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-                                {auth.user ? (
+                                {ownerMode ? (
+                                    <Button asChild size="lg" className="bg-white text-violet-800 hover:bg-violet-50"><a href={adminWhatsApp} target="_blank" rel="noreferrer">Daftarkan Gedung <ArrowRightIcon /></a></Button>
+                                ) : auth.user ? (
                                     <Button asChild size="lg" className="bg-white text-violet-800 hover:bg-violet-50"><Link href={route('dashboard')}>Buka Dashboard <ArrowRightIcon /></Link></Button>
                                 ) : (
                                     <>
@@ -246,7 +250,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                                     <a href="#features" className="transition-colors hover:text-white">Fitur</a><a href="#about" className="transition-colors hover:text-white">Tentang Kami</a><a href="#contact" className="transition-colors hover:text-white">Kontak</a>
                                 </nav>
                             </div>
-                            <p className="text-sm text-violet-200">© 2026 FixIn — Universitas AMIKOM Yogyakarta.</p>
+                            <p className="text-sm text-violet-200">© 2026 FixIn.</p>
                         </div>
                     </div>
                 </footer>

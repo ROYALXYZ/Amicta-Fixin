@@ -45,6 +45,7 @@ final class AuditMessageFormatter
             'building.created' => "🏢 {$actor} menambahkan gedung baru.",
             'building.updated' => "🏢 {$actor} memperbarui data gedung.",
             'building.deactivated' => "⏸️ {$actor} menonaktifkan gedung.",
+            'building.activated' => "▶️ {$actor} mengaktifkan gedung beserta {$metadata['unit_count']} unit.",
             'unit.created' => "🚪 {$actor} menambahkan unit baru.",
             'unit.updated' => "🚪 {$actor} memperbarui data unit.",
             'unit.deactivated' => "⏸️ {$actor} menonaktifkan unit.",
