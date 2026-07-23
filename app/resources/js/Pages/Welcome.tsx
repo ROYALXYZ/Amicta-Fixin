@@ -20,7 +20,7 @@ import { Marquee } from '@/Components/ui/marquee';
 import { GridPattern } from '@/Components/ui/grid-pattern';
 import { Button } from '@/Components/ui/button';
 import { Separator } from '@/Components/ui/separator';
-import { Shield, Zap, Users, Star, AlertTriangle } from 'lucide-react';
+import { Activity, Zap, FileText, BellRing, AlertTriangle } from 'lucide-react';
 
 const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
 const StarIcon = ({ className = 'h-4 w-4 fill-current' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className}><path d="m12 2.25 2.83 6.06 6.67.52-5.1 4.36 1.57 6.48L12 16.36 6.03 19.67l1.57-6.48-5.1-4.36 6.67-.52L12 2.25Z" /></svg>;
@@ -262,41 +262,41 @@ function AboutSection() {
                  <div data-aos="fade-right">
                     <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6 leading-tight">Lahir dari kebutuhan nyata penghuni gedung</h2>
                     <p className="text-white/90 text-lg leading-relaxed mb-10">
-                        FixIn lahir di lingkungan kampus Universitas AMIKOM Yogyakarta. Berangkat dari frustasi penghuni yang harus telepon berkali-kali hanya untuk melaporkan kerusakan kecil, kami membangun solusi digital yang menghubungkan semua pihak secara transparan.
+                        Ide FixIn sederhana: mengakhiri birokrasi pelaporan fasilitas yang berbelit. Bermula dari pengamatan di lingkungan sekitar, kami menciptakan platform yang mengubah tumpukan keluhan menjadi tindakan nyata. Cukup dari smartphone, penghuni bisa melapor, teknisi langsung menerima tugas, dan manajemen bisa memantau semuanya secara real-time.
                     </p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="flex gap-4">
-                            <div className="shrink-0 text-white"><Shield strokeWidth={2.5} className="w-6 h-6" /></div>
-                            <div><h4 className="font-bold text-white text-sm">Keamanan Data</h4><p className="text-violet-200 text-sm mt-1">Enkripsi End-to-end</p></div>
+                            <div className="shrink-0 text-white"><Activity strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Pantauan Real-Time</h4><p className="text-violet-200 text-sm mt-1">Lacak status langsung dari HP Anda.</p></div>
                         </div>
                         <div className="flex gap-4">
                             <div className="shrink-0 text-white"><Zap strokeWidth={2.5} className="w-6 h-6" /></div>
-                            <div><h4 className="font-bold text-white text-sm">Performa Optimal</h4><p className="text-violet-200 text-sm mt-1">Kecepatan Respon Tinggi</p></div>
+                            <div><h4 className="font-bold text-white text-sm">Distribusi Cepat</h4><p className="text-violet-200 text-sm mt-1">Laporan diteruskan ke teknisi tanpa menunggu lama.</p></div>
                         </div>
                         <div className="flex gap-4">
-                            <div className="shrink-0 text-white"><Users strokeWidth={2.5} className="w-6 h-6" /></div>
-                            <div><h4 className="font-bold text-white text-sm">Tim Berpengalaman</h4><p className="text-violet-200 text-sm mt-1">pengalaman lebih dari 2 tahun</p></div>
+                            <div className="shrink-0 text-white"><FileText strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Bebas Kertas</h4><p className="text-violet-200 text-sm mt-1">Semua riwayat tersimpan rapi secara digital.</p></div>
                         </div>
                         <div className="flex gap-4">
-                            <div className="shrink-0 text-white"><Star strokeWidth={2.5} className="w-6 h-6" /></div>
-                            <div><h4 className="font-bold text-white text-sm">Reputasi Kuat</h4><p className="text-violet-200 text-sm mt-1">Diadopsi banyak pengelola gedung</p></div>
+                            <div className="shrink-0 text-white"><BellRing strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Notifikasi Instan</h4><p className="text-violet-200 text-sm mt-1">Penghuni tahu perkembangan laporan.</p></div>
                         </div>
                     </div>
                 </div>
                 
                  <div data-aos="fade-left" data-aos-delay="150" className="relative rounded-2xl overflow-hidden shadow-2xl h-[500px]">
-                    <img src="/images/developer_collaboration.jpg" alt="Tim Developer Berkolaborasi" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src="/assets/About_Us.png" alt="Tentang FixIn" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-slate-900/10"></div>
                     
                     <div className="absolute bottom-5 left-5 bg-white/95 backdrop-blur-md p-3.5 px-5 rounded-xl shadow-xl border border-white/40">
-                        <p className="text-2xl font-extrabold text-slate-900 mb-0.5 tracking-tight">500k+</p>
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Total Download</p>
+                        <p className="text-2xl font-extrabold text-slate-900 mb-0.5 tracking-tight">100% Digital</p>
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Tinggalkan Tumpukan Kertas</p>
                     </div>
                     
                     <div className="absolute top-5 right-5 bg-amber-400/95 backdrop-blur-md p-3.5 px-5 rounded-xl shadow-xl border border-amber-300/50 text-right">
-                        <p className="text-2xl font-extrabold text-slate-900 mb-0.5 tracking-tight">99.9%</p>
-                        <p className="text-amber-900/70 text-[10px] font-bold uppercase tracking-widest">Waktu Respon</p>
+                        <p className="text-2xl font-extrabold text-slate-900 mb-0.5 tracking-tight">Real-time</p>
+                        <p className="text-amber-900/70 text-[10px] font-bold uppercase tracking-widest">Update Status Laporan</p>
                     </div>
                 </div>
             </div>

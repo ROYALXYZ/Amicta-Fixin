@@ -45,7 +45,7 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
                 <SidebarHeader>
                     <div className="flex h-12 items-center gap-3 px-2 py-2 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
                         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Wrench className="size-4" />
+                            <img src="/assets/logo_tanpa_fixin.png" alt="Logo" className="size-5 object-contain" />
                         </div>
                         <div className="flex min-w-0 flex-col overflow-hidden transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                             <p className="truncate text-sm font-bold tracking-tight">FixIn</p>

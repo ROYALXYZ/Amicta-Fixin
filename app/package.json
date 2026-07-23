@@ -5,7 +5,7 @@
     "scripts": {
         "build": "tsc && vite build",
         "dev": "vite",
-        "dev:all": "concurrently --kill-others -n laravel,vite,reverb -c blue,green,magenta \"php artisan serve\" \"npm run dev\" \"php artisan reverb:start\""
+        "dev:all": "concurrently --kill-others -n laravel,vite,reverb -c blue,green,magenta \" \"npm run dev\" \"php artisan reverb:start\""
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",

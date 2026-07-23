@@ -10,6 +10,7 @@ import { useOrganizationRealtime } from '@/hooks/useOrganizationRealtime';
 import { toast } from 'sonner';
 
 const CheckCircleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" /><path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
 const ZapIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const WindIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const DropletsIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M7 16.3c0 2.59 2.24 4.7 5 4.7s5-2.11 5-4.7c0-2.59-5-9.3-5-9.3s-5 6.71-5 9.3z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -55,31 +56,35 @@ export default function Tickets({ tickets }: { tickets: TicketRowType[] }) {
     const history = filteredTickets.filter((t) => ['SELESAI', 'DIBATALKAN'].includes(t.status));
     const [showHistory, setShowHistory] = useState(false);
 
-    return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Teknisi</h2>}><Head title="Work Order" /><div className="mx-auto max-w-6xl p-6 lg:p-8 space-y-6">
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Teknisi</h2>}><Head title="Work Order" /><div className="mx-auto max-w-7xl p-6 lg:p-8 space-y-6">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Tugas Lapangan</h1>
                 <p className="text-slate-500">Lihat work order aktif, tambahkan catatan, dan unggah bukti penyelesaian.</p>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:w-auto w-full">
-                <Card>
-                    <CardHeader className="p-4 pb-0">
-                        <CardTitle className="text-xs font-medium text-slate-500">Tugas Aktif</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                        <div className="text-2xl font-bold">{active.length}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="p-4 pb-0">
-                        <CardTitle className="text-xs font-medium text-slate-500">Diselesaikan</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                        <div className="text-2xl font-bold">{tickets.filter((t) => t.status === 'SELESAI').length}</div>
-                    </CardContent>
-                </Card>
-            </div>
         </section>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-2">
+            <Card>
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium text-slate-700">Tugas Aktif</CardTitle>
+                    <div className="rounded-full bg-primary/10 p-2.5"><WrenchIcon className="h-4 w-4 text-primary" /></div>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-3xl font-bold tracking-tight text-slate-950">{active.length}</div>
+                    <p className="mt-3 text-xs text-slate-500">Pekerjaan saat ini</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium text-slate-700">Diselesaikan</CardTitle>
+                    <div className="rounded-full bg-emerald-100 p-2.5"><CheckCircleIcon className="h-4 w-4 text-emerald-600" /></div>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-3xl font-bold tracking-tight text-slate-950">{tickets.filter((t) => t.status === 'SELESAI').length}</div>
+                    <p className="mt-3 text-xs text-slate-500">Pekerjaan selesai</p>
+                </CardContent>
+            </Card>
+        </div>
 
         <Card className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">

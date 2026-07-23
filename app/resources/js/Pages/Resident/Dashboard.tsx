@@ -38,21 +38,37 @@ export default function Dashboard({ summary, recentTickets }: Props) {
     const user = usePage().props.auth.user as { name: string };
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const stats = [
-        { label: 'Total Laporan', value: summary.total, icon: FileText },
-        { label: 'Menunggu / Ditugaskan', value: summary.pending, icon: Clock3 },
-        { label: 'Sedang Dikerjakan', value: summary.inProgress, icon: Wrench },
-        { label: 'Selesai', value: summary.completed, icon: CheckCircle2 },
+        { label: 'Total Laporan', value: summary.total, note: 'Semua laporan Anda', icon: <div className="rounded-full bg-slate-100 p-2.5"><FileText className="h-4 w-4 text-slate-600" /></div> },
+        { label: 'Menunggu / Ditugaskan', value: summary.pending, note: 'Dalam antrean', icon: <div className="rounded-full bg-amber-100 p-2.5"><Clock3 className="h-4 w-4 text-amber-600" /></div> },
+        { label: 'Sedang Dikerjakan', value: summary.inProgress, note: 'Diproses teknisi', icon: <div className="rounded-full bg-primary/10 p-2.5"><Wrench className="h-4 w-4 text-primary" /></div> },
+        { label: 'Selesai', value: summary.completed, note: 'Sudah diperbaiki', icon: <div className="rounded-full bg-emerald-100 p-2.5"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div> },
     ];
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-semibold tracking-tight">Dashboard Penghuni</h2>}>
         <Head title="Dashboard Penghuni" />
-        <div className="mx-auto max-w-6xl space-y-8 p-6 lg:p-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div><h1 className="text-2xl font-bold tracking-tight">Halo, {user.name.split(' ')[0]}</h1><p className="mt-1 text-sm text-muted-foreground">Pantau status laporan perbaikan Anda.</p></div>
-                <Button asChild><Link href={`${route('resident.tickets.index')}#buat-laporan`}>Buat Laporan</Link></Button>
+        <div className="mx-auto max-w-7xl p-6 lg:p-8 space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Halo, {user.name.split(' ')[0]}</h1>
+                    <p className="mt-1 text-slate-500">Pantau status laporan perbaikan Anda.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button asChild><Link href={`${route('resident.tickets.index')}#buat-laporan`}>Buat Laporan</Link></Button>
+                </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {stats.map(({ label, value, icon: Icon }) => <Card key={label}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{label}</CardTitle><Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" /></CardHeader><CardContent><p className="text-2xl font-bold">{value}</p></CardContent></Card>)}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {stats.map(({ label, value, note, icon }) => (
+                    <Card key={label}>
+                        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                            <CardTitle className="text-sm font-medium text-slate-700">{label}</CardTitle>
+                            {icon}
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold tracking-tight text-slate-950">{value}</div>
+                            <p className="mt-3 text-xs text-slate-500">{note}</p>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
             <Card>
                 <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Laporan Terbaru</CardTitle><CardDescription>Status laporan terakhir Anda.</CardDescription></div><Button variant="outline" asChild><Link href={route('resident.tickets.index')}>Lihat Semua Laporan</Link></Button></CardHeader>
