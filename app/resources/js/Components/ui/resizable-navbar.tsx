@@ -280,12 +280,9 @@ export const NavbarLogo = () => {
   return (
     <a
       href="#"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 mr-4 flex items-center py-1"
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-700 text-white shadow-md shadow-violet-700/30">
-        <span className="text-sm font-black">F</span>
-      </span>
-      <span className="font-extrabold tracking-tight text-slate-900">Fix<span className="text-violet-700">In</span></span>
+      <img src="/assets/FixIn.png" alt="FixIn Logo" className="h-9 w-auto object-contain drop-shadow-sm" />
     </a>
   );
 };

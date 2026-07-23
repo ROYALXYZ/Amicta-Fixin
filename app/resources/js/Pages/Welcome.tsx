@@ -20,7 +20,7 @@ import { Marquee } from '@/Components/ui/marquee';
 import { GridPattern } from '@/Components/ui/grid-pattern';
 import { Button } from '@/Components/ui/button';
 import { Separator } from '@/Components/ui/separator';
-import { Shield, Zap, Users, Star } from 'lucide-react';
+import { Shield, Zap, Users, Star, AlertTriangle } from 'lucide-react';
 
 const WrenchIcon = ({ className = 'h-4 w-4' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22 19.59 14.41 12A6.5 6.5 0 0 0 8 4.5L11 7.5 7.5 11 4.5 8A6.5 6.5 0 0 0 12 14.41L19.59 22 22 19.59Z" /></svg>;
 const StarIcon = ({ className = 'h-4 w-4 fill-current' }: { className?: string }) => <svg viewBox="0 0 24 24" className={className}><path d="m12 2.25 2.83 6.06 6.67.52-5.1 4.36 1.57 6.48L12 16.36 6.03 19.67l1.57-6.48-5.1-4.36 6.67-.52L12 2.25Z" /></svg>;
@@ -72,18 +72,17 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
         <>
             <Head title="FixIn" />
             <div className="min-h-screen scroll-smooth bg-white font-sans overflow-x-clip text-slate-900">
-                <Navbar className="fixed top-0">
-                    <NavBody className="!bg-transparent !shadow-none">
+                <Navbar className="fixed top-0 z-50 w-full">
+                    <NavBody className="!bg-[#F8F9FA] border-b border-slate-100">
                         <NavbarLogo />
                         <NavItems items={navItems} />
                         <div className="flex items-center gap-3">
                             {auth.user ? <NavbarButton as={Link} href={route('dashboard')}>Dashboard</NavbarButton> : <>
-                                <NavbarButton as={Link} href={route('login')} variant="secondary">Masuk</NavbarButton>
-                                <NavbarButton as={Link} href={route('register')} variant="dark">Daftar</NavbarButton>
+                                <NavbarButton as={Link} href={route('urgent.create')} variant="dark" className="!bg-red-600 hover:!bg-red-700 !border-none !text-white flex items-center gap-1.5"><AlertTriangle className="h-4 w-4" /> Emergency</NavbarButton>
                             </>}
                         </div>
                     </NavBody>
-                    <MobileNav className="!bg-transparent !shadow-none">
+                    <MobileNav className="!bg-[#F8F9FA] border-b border-slate-100">
                         <MobileNavHeader>
                             <NavbarLogo />
                             <MobileNavToggle isOpen={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
@@ -91,8 +90,7 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                         <MobileNavMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)}>
                             {navItems.map((item) => <a key={item.link} href={item.link} onClick={(event) => { const target = document.getElementById(item.link.slice(1)); if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.history.pushState(null, '', item.link); } setIsMobileMenuOpen(false); }} className="text-neutral-600"><span>{item.name}</span></a>)}
                             {auth.user ? <NavbarButton as={Link} href={route('dashboard')} onClick={() => setIsMobileMenuOpen(false)} className="w-full">Dashboard</NavbarButton> : <>
-                                <NavbarButton as={Link} href={route('login')} onClick={() => setIsMobileMenuOpen(false)} variant="secondary" className="w-full">Masuk</NavbarButton>
-                                <NavbarButton as={Link} href={route('register')} onClick={() => setIsMobileMenuOpen(false)} className="w-full">Daftar</NavbarButton>
+                                <NavbarButton as={Link} href={route('urgent.create')} onClick={() => setIsMobileMenuOpen(false)} variant="dark" className="w-full !bg-red-600 hover:!bg-red-700 !border-none !text-white flex items-center justify-center gap-1.5"><AlertTriangle className="h-4 w-4" /> Emergency</NavbarButton>
                             </>}
                         </MobileNavMenu>
                     </MobileNav>
@@ -164,13 +162,13 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
                     
                 </section>
 
-                <section className="border-b border-slate-100 bg-[#FBFAFF] py-16 md:py-20" aria-label="Statistik FixIn">
+                <section className="bg-violet-800 py-16 md:py-20" aria-label="Statistik FixIn">
                     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
                         {stats.map((stat) => (
                              <div key={stat.label} data-aos="fade-up">
-                                <p className="text-5xl font-extrabold tracking-tight text-violet-700">{stat.value}</p>
-                                <h2 className="mt-3 text-base font-bold text-slate-900">{stat.label}</h2>
-                                <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                                <p className="text-5xl font-extrabold tracking-tight text-white">{stat.value}</p>
+                                <h2 className="mt-3 text-base font-bold text-white">{stat.label}</h2>
+                                <p className="mt-2 text-sm leading-relaxed text-white/90">
                                     Data operasional tercatat rapi dan mudah dipantau.
                                 </p>
                             </div>
@@ -258,30 +256,30 @@ export default function Welcome({ auth }: PageProps<{ laravelVersion: string; ph
 
 function AboutSection() {
     return (
-         <section id="about" className="flex min-h-screen scroll-mt-20 items-center bg-white py-24 border-b border-slate-100">
+         <section id="about" className="flex min-h-screen scroll-mt-20 items-center bg-violet-800 py-24">
              <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
                  <div data-aos="fade-right">
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6 leading-tight">Lahir dari kebutuhan nyata penghuni gedung</h2>
-                    <p className="text-slate-600 text-lg leading-relaxed mb-10">
+                    <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6 leading-tight">Lahir dari kebutuhan nyata penghuni gedung</h2>
+                    <p className="text-white/90 text-lg leading-relaxed mb-10">
                         FixIn lahir di lingkungan kampus Universitas AMIKOM Yogyakarta. Berangkat dari frustasi penghuni yang harus telepon berkali-kali hanya untuk melaporkan kerusakan kecil, kami membangun solusi digital yang menghubungkan semua pihak secara transparan.
                     </p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="flex gap-4">
-                            <div className="w-10 h-10 shrink-0 bg-violet-100 text-violet-700 flex items-center justify-center rounded-lg"><Shield strokeWidth={2.5} className="w-5 h-5" /></div>
-                            <div><h4 className="font-bold text-slate-900 text-sm">Keamanan Data</h4><p className="text-slate-500 text-sm mt-1">Enkripsi End-to-end</p></div>
+                            <div className="shrink-0 text-white"><Shield strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Keamanan Data</h4><p className="text-violet-200 text-sm mt-1">Enkripsi End-to-end</p></div>
                         </div>
                         <div className="flex gap-4">
-                            <div className="w-10 h-10 shrink-0 bg-amber-100 text-amber-700 flex items-center justify-center rounded-lg"><Zap strokeWidth={2.5} className="w-5 h-5" /></div>
-                            <div><h4 className="font-bold text-slate-900 text-sm">Performa Optimal</h4><p className="text-slate-500 text-sm mt-1">Kecepatan Respon Tinggi</p></div>
+                            <div className="shrink-0 text-white"><Zap strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Performa Optimal</h4><p className="text-violet-200 text-sm mt-1">Kecepatan Respon Tinggi</p></div>
                         </div>
                         <div className="flex gap-4">
-                            <div className="w-10 h-10 shrink-0 bg-blue-100 text-blue-700 flex items-center justify-center rounded-lg"><Users strokeWidth={2.5} className="w-5 h-5" /></div>
-                            <div><h4 className="font-bold text-slate-900 text-sm">Tim Berpengalaman</h4><p className="text-slate-500 text-sm mt-1">pengalaman lebih dari 2 tahun</p></div>
+                            <div className="shrink-0 text-white"><Users strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Tim Berpengalaman</h4><p className="text-violet-200 text-sm mt-1">pengalaman lebih dari 2 tahun</p></div>
                         </div>
                         <div className="flex gap-4">
-                            <div className="w-10 h-10 shrink-0 bg-emerald-100 text-emerald-700 flex items-center justify-center rounded-lg"><Star strokeWidth={2.5} className="w-5 h-5" /></div>
-                            <div><h4 className="font-bold text-slate-900 text-sm">Reputasi Kuat</h4><p className="text-slate-500 text-sm mt-1">Diadopsi banyak pengelola gedung</p></div>
+                            <div className="shrink-0 text-white"><Star strokeWidth={2.5} className="w-6 h-6" /></div>
+                            <div><h4 className="font-bold text-white text-sm">Reputasi Kuat</h4><p className="text-violet-200 text-sm mt-1">Diadopsi banyak pengelola gedung</p></div>
                         </div>
                     </div>
                 </div>
