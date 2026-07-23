@@ -10,6 +10,8 @@ use App\Models\Ticket;
 use App\Models\TicketPhoto;
 use App\Models\TicketStatusHistory;
 use App\Models\Unit;
+use App\Jobs\SendReportTelegramNotification;
+use App\Support\AuditLogger;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,6 +70,9 @@ class UrgentTicketController extends Controller
 
             return $ticket;
         });
+
+        AuditLogger::record('ticket.created', "Membuat laporan urgent #{$ticket->id}", $organization, null, $ticket, ['anonymous' => true, 'status' => $ticket->status?->value]);
+        SendReportTelegramNotification::dispatch($ticket->id)->afterCommit();
 
         return to_route('urgent.create')->with('success', "Laporan urgent #{$ticket->id} berhasil dikirim.");
     }

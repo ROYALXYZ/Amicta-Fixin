@@ -9,6 +9,7 @@ use App\Models\Building;
 use App\Models\Ticket;
 use App\Models\TicketStatusHistory;
 use App\Models\Unit;
+use App\Support\AuditLogger;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use App\Support\TenantContext;
@@ -82,7 +83,8 @@ class AdminTicketController extends Controller
     {
         $o = TenantContext::organization($r);
         $d = $r->validate(['name' => 'required|string|max:120']);
-        Building::create(['organization_id' => $o->id, ...$d]);
+        $building = Building::create(['organization_id' => $o->id, ...$d]);
+        AuditLogger::record('building.created', "Membuat gedung {$building->name}", $o, $r->user(), $building);
 
         return back();
     }
@@ -105,7 +107,8 @@ class AdminTicketController extends Controller
         $d = $r->validate(['building_id' => 'required|integer', 'number' => 'required|string|max:50']);
         $building = Building::where('organization_id', $o->id)->findOrFail($d['building_id']);
         abort_if(Unit::where('organization_id', $o->id)->where('building_id', $building->id)->where('number', $d['number'])->exists(), 422, 'Unit sudah ada di gedung/area ini.');
-        Unit::create(['organization_id' => $o->id, ...$d]);
+        $unit = Unit::create(['organization_id' => $o->id, ...$d]);
+        AuditLogger::record('unit.created', "Membuat unit {$unit->number}", $o, $r->user(), $unit);
 
         return back();
     }
@@ -115,6 +118,7 @@ class AdminTicketController extends Controller
         $o = TenantContext::organization($r);
         abort_unless($building->organization_id === $o->id, 404);
         $building->update($r->validate(['name' => 'required|string|max:120']));
+        AuditLogger::record('building.updated', "Mengubah gedung {$building->name}", $o, $r->user(), $building);
         return back();
     }
 
@@ -125,6 +129,7 @@ class AdminTicketController extends Controller
         $active = ! $building->is_active;
         $building->update(['is_active' => $active]);
         if (! $active) $building->units()->update(['is_active' => false]);
+        AuditLogger::record('building.'.($active ? 'activated' : 'deactivated'), "Mengubah status gedung {$building->name}", $o, $r->user(), $building, ['is_active' => $active]);
         return back();
     }
 
@@ -135,6 +140,7 @@ class AdminTicketController extends Controller
         $d = $r->validate(['name' => 'required|string|max:50']);
         abort_if(Unit::where('organization_id', $o->id)->where('building_id', $unit->building_id)->where('number', $d['name'])->where('id', '!=', $unit->id)->exists(), 422, 'Unit sudah ada di gedung/area ini.');
         $unit->update(['number' => $d['name']]);
+        AuditLogger::record('unit.updated', "Mengubah unit {$unit->number}", $o, $r->user(), $unit);
         return back();
     }
 
@@ -143,6 +149,7 @@ class AdminTicketController extends Controller
         $o = TenantContext::organization($r);
         abort_unless($unit->organization_id === $o->id, 404);
         $unit->update(['is_active' => ! $unit->is_active]);
+        AuditLogger::record('unit.'.($unit->is_active ? 'activated' : 'deactivated'), "Mengubah status unit {$unit->number}", $o, $r->user(), $unit, ['is_active' => $unit->is_active]);
         return back();
     }
 
@@ -165,6 +172,7 @@ class AdminTicketController extends Controller
         $u = User::where('organization_id', $o->id)->where('role', UserRole::Technician)->findOrFail($d['technician_id']);
         $ticket->update(['technician_id' => $u->id, 'priority' => $d['priority'], 'status' => TicketStatus::Assigned]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
+        AuditLogger::record('ticket.assigned', "Menugaskan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['technician_id' => $u->id, 'priority' => $d['priority']]);
 
         $this->forgetTicketCache($o->id);
         try {
@@ -183,6 +191,7 @@ class AdminTicketController extends Controller
         $old = $ticket->status;
         $ticket->update(['status' => TicketStatus::Cancelled, 'cancellation_reason' => $d['reason'], 'cancelled_by' => $r->user()->id, 'cancelled_at' => now()]);
         TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => $old, 'new_status' => TicketStatus::Cancelled, 'changed_by' => $r->user()->id, 'note' => $d['reason']]);
+        AuditLogger::record('ticket.cancelled', "Membatalkan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['reason' => $d['reason']]);
 
         $this->forgetTicketCache($o->id);
         try {
@@ -200,12 +209,18 @@ class AdminTicketController extends Controller
         $technician = User::where('organization_id', $o->id)->where('role', UserRole::Technician)->where('is_active', true)->findOrFail($d['technician_id']);
         $tickets = Ticket::where('organization_id', $o->id)->whereIn('id', $d['ticket_ids'])->lockForUpdate()->get();
         abort_if($tickets->count() !== count(array_unique($d['ticket_ids'])), 422, 'Sebagian tiket tidak ditemukan.');
-        abort_if($tickets->contains(fn (Ticket $ticket) => $ticket->status !== TicketStatus::WaitingDispatch), 422, 'Semua tiket harus berstatus menunggu dispatch.');
+        abort_if($tickets->contains(fn (Ticket $ticket) => ! in_array($ticket->status, [TicketStatus::WaitingDispatch, TicketStatus::Assigned], true)), 422, 'Tiket hanya dapat ditugaskan jika berstatus menunggu dispatch atau sudah ditugaskan.');
         DB::transaction(function () use ($tickets, $technician, $d, $o, $r) {
             foreach ($tickets as $ticket) {
+                $oldTechnicianId = $ticket->technician_id;
+                $wasAssigned = $ticket->status === TicketStatus::Assigned;
                 $ticket->update(['technician_id' => $technician->id, 'priority' => $d['priority'], 'status' => TicketStatus::Assigned]);
-                TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
+                if (! $wasAssigned) {
+                    TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => TicketStatus::WaitingDispatch, 'new_status' => TicketStatus::Assigned, 'changed_by' => $r->user()->id]);
+                }
+                AuditLogger::record($wasAssigned ? 'ticket.reassigned' : 'ticket.assigned', $wasAssigned ? "Mengganti teknisi tiket #{$ticket->id}" : "Menugaskan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['old_technician_id' => $oldTechnicianId, 'technician_id' => $technician->id, 'priority' => $d['priority']], false);
             }
+            AuditLogger::record('ticket.bulk_assigned', 'Melakukan penugasan massal tiket', $o, $r->user(), null, ['ticket_ids' => $tickets->pluck('id')->values()->all(), 'technician_id' => $technician->id, 'priority' => $d['priority']]);
         });
         $this->forgetTicketCache($o->id);
         OrganizationTicketsChanged::dispatch($o->id, 'updated');
@@ -224,7 +239,9 @@ class AdminTicketController extends Controller
                 $old = $ticket->status;
                 $ticket->update(['status' => TicketStatus::Cancelled, 'cancellation_reason' => $d['reason'], 'cancelled_by' => $r->user()->id, 'cancelled_at' => now()]);
                 TicketStatusHistory::create(['organization_id' => $o->id, 'ticket_id' => $ticket->id, 'old_status' => $old, 'new_status' => TicketStatus::Cancelled, 'changed_by' => $r->user()->id, 'note' => $d['reason']]);
+                AuditLogger::record('ticket.cancelled', "Membatalkan tiket #{$ticket->id}", $o, $r->user(), $ticket, ['reason' => $d['reason']], false);
             }
+            AuditLogger::record('ticket.bulk_cancelled', 'Melakukan pembatalan massal tiket', $o, $r->user(), null, ['ticket_ids' => $tickets->pluck('id')->values()->all(), 'reason' => $d['reason']]);
         });
         $this->forgetTicketCache($o->id);
         OrganizationTicketsChanged::dispatch($o->id, 'updated');

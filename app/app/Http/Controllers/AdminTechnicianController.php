@@ -7,6 +7,7 @@ use App\Events\OrganizationTechniciansChanged;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use App\Support\TenantContext;
+use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
@@ -33,7 +34,7 @@ class AdminTechnicianController extends Controller
         $organization = TenantContext::organization($request);
         $data = $this->validated($request);
 
-        User::create([
+        $technician = User::create([
             'organization_id' => $organization->id,
             ...$data,
             'phone_number' => PhoneNumber::normalize($data['phone_number']),
@@ -41,6 +42,7 @@ class AdminTechnicianController extends Controller
             'password' => Hash::make($data['password']),
             'role' => UserRole::Technician,
         ]);
+        AuditLogger::record('technician.created', "Membuat teknisi {$technician->name}", $organization, $request->user(), $technician);
 
         $this->forgetTechnicianCache($organization->id);
         OrganizationTechniciansChanged::dispatch($organization->id, 'created');
@@ -62,6 +64,7 @@ class AdminTechnicianController extends Controller
             $data['password'] = Hash::make($data['password']);
         }
         $technician->update($data);
+        AuditLogger::record('technician.updated', "Mengubah teknisi {$technician->name}", TenantContext::organization($request), $request->user(), $technician);
 
         $this->forgetTechnicianCache($technician->organization_id);
         OrganizationTechniciansChanged::dispatch($technician->organization_id, 'updated');
@@ -72,6 +75,7 @@ class AdminTechnicianController extends Controller
     {
         $this->technician($request, $technician);
         $technician->update(['is_active' => ! $technician->is_active]);
+        AuditLogger::record('technician.'.($technician->is_active ? 'activated' : 'deactivated'), "Mengubah status teknisi {$technician->name}", TenantContext::organization($request), $request->user(), $technician, ['is_active' => $technician->is_active]);
         $this->forgetTechnicianCache($technician->organization_id);
         OrganizationTechniciansChanged::dispatch($technician->organization_id, 'updated');
 
