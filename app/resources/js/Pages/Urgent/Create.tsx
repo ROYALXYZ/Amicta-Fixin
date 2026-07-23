@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Com
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { AlertTriangle, ArrowLeft, ImagePlus, Send, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ImagePlus, Send } from 'lucide-react';
 import { FormEventHandler } from 'react';
 import { toast } from 'sonner';
 
@@ -22,7 +22,9 @@ export default function Create({ organization, buildings, flash }: Props) {
             <div className="mx-auto max-w-5xl">
                 <div className="mb-8 flex items-center justify-between">
                     <Link href={route('login')} className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft className="size-4" />Kembali ke login</Link>
-                    <Link href="/" className="flex items-center gap-2 font-semibold text-foreground"><span className="flex size-8 items-center justify-center rounded-lg bg-slate-950 text-white"><Wrench className="size-4" /></span>FixIn</Link>
+                    <Link href="/">
+                        <img src="/assets/FixIn.png" alt="FixIn Logo" className="h-9 w-auto object-contain drop-shadow-sm" />
+                    </Link>
                 </div>
 
                 <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-start">
