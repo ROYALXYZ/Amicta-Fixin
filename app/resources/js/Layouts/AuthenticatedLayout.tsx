@@ -47,13 +47,13 @@ export default function AuthenticatedLayout({ header, children }: PropsWithChild
         <SidebarProvider defaultOpen={false}>
             <Sidebar collapsible="icon">
                 <SidebarHeader>
-                    <div className="flex h-12 items-center gap-3 px-2 py-2 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+                    <Link href="/" className="flex h-12 items-center gap-3 px-2 py-2 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
                         <img src="/assets/logo_tanpa_fixin.png" alt="Logo FixIn" className="size-8 shrink-0 object-contain group-data-[collapsible=icon]:ml-4" />
                         <div className="flex min-w-0 flex-col overflow-hidden transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                             <p className="truncate text-sm font-bold tracking-tight">FixIn</p>
                             <p className="truncate text-xs text-muted-foreground">{displayRole}</p>
                         </div>
-                    </div>
+                    </Link>
                 </SidebarHeader>
                 <SidebarContent>
                     <SidebarGroup>
