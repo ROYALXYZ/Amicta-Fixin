@@ -12,7 +12,14 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
         <!-- Scripts -->
+        <!-- DEBUG: {{ request()->getScheme() }} | {{ request()->isSecure() ? 'secure' : 'not-secure' }} | {{ url('/') }} -->
         @routes
+        <script>
+            // Force Ziggy URL to HTTPS
+            if (typeof Ziggy !== 'undefined' && Ziggy.url) {
+                Ziggy.url = Ziggy.url.replace(/^http:\/\//, 'https://');
+            }
+        </script>
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/Pages/{$page['component']}.tsx"])
         @inertiaHead

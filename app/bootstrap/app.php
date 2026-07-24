@@ -19,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*', headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR | \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO);
+        
         $middleware->web(prepend: [
+            \App\Http\Middleware\ForceHttpsScheme::class,
             AddServerTiming::class,
         ]);
         $middleware->web(append: [
