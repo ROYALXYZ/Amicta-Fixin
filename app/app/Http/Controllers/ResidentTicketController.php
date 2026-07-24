@@ -25,7 +25,7 @@ class ResidentTicketController extends Controller
     public function dashboard(Request $request)
     {
         $org = TenantContext::organization($request);
-        $perPage = in_array($request->integer('per_page'), [5, 10, 25], true) ? $request->integer('per_page') : 5;
+        $perPage = in_array($request->integer('per_page'), [5, 10, 15, 20], true) ? $request->integer('per_page') : 5;
         $tickets = Ticket::query()
             ->where('organization_id', $org->id)
             ->where('reporter_id', $request->user()->id);
@@ -62,7 +62,7 @@ class ResidentTicketController extends Controller
     public function index(Request $request)
     {
         $org = TenantContext::organization($request);
-        $perPage = in_array($request->integer('per_page'), [5, 10, 25], true) ? $request->integer('per_page') : 5;
+        $perPage = in_array($request->integer('per_page'), [5, 10, 15, 20], true) ? $request->integer('per_page') : 5;
 
         return Inertia::render('Resident/Tickets', ['tickets' => Ticket::where('organization_id', $org->id)->where('reporter_id', $request->user()->id)->with(['building:id,name', 'unit:id,number', 'issueCategory:id,name'])->latest()->paginate($perPage)->withQueryString(), 'buildings' => Building::where('organization_id', $org->id)->where('is_active', true)->with('units')->get()]);
     }

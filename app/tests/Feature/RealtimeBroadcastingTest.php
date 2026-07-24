@@ -7,6 +7,7 @@ use App\Events\OrganizationTicketsChanged;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,6 +45,7 @@ class RealtimeBroadcastingTest extends TestCase
     {
         $event = new OrganizationTechniciansChanged(42, 'deleted');
 
+        $this->assertInstanceOf(ShouldBroadcast::class, $event);
         $this->assertSame('technicians.changed', $event->broadcastAs());
         $this->assertSame(['action' => 'deleted'], $event->broadcastWith());
         $this->assertSame('private-organization.42', $event->broadcastOn()[0]->name);
