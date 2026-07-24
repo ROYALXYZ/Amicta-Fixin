@@ -138,6 +138,8 @@ export default function ColorBends({
 
   useEffect(() => {
     const container = containerRef.current;
+    if (!container) return; // Guard: container not mounted yet
+    
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 

@@ -30,10 +30,13 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return redirect()->route(match (request()->user()->role->value) {
+    if (!auth()->check()) {
+        return redirect()->route('login');
+    }
+    return redirect()->route(match (auth()->user()->role->value) {
         'RESIDENT' => 'resident.dashboard', 'ADMIN' => 'admin.tickets.index', 'TECHNICIAN' => 'technician.tickets.index', default => 'platform.organizations.index',
     });
-})->middleware(['auth', 'verified', 'tenant.user'])->name('dashboard');
+})->name('dashboard');
 
 Route::get('/urgent', [UrgentTicketController::class, 'create'])->name('urgent.create');
 Route::post('/urgent', [UrgentTicketController::class, 'store'])->name('urgent.store');
