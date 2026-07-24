@@ -20,6 +20,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\URL::forceScheme('https');
+        
+        // Force Ziggy to use HTTPS
+        if ($this->app->environment('production')) {
+            config(['app.url' => str_replace('http://', 'https://', config('app.url'))]);
+        }
+        
         Vite::prefetch(concurrency: 3);
     }
 }

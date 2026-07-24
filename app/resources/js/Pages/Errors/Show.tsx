@@ -1,9 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Home, RefreshCw } from 'lucide-react';
-import ColorBends from '@/Components/ColorBends.jsx';
 import { Button } from '@/Components/ui/button';
-
-const ErrorBackground = ColorBends as any;
 
 type Props = { status: number; title: string; message: string; detail: string };
 
@@ -26,25 +23,7 @@ export default function Show({ status, title, message, detail }: Props) {
                         <Button type="button" variant="link" size="sm" onClick={() => window.history.back()} className="mt-3 text-muted-foreground"><ArrowLeft /> Halaman sebelumnya</Button>
                     </div>
                 </section>
-                <aside className="relative hidden min-h-[280px] overflow-hidden bg-slate-950 lg:block" aria-label="Area ilustrasi error">
-                    <div className="absolute inset-0">
-                        <ErrorBackground
-                            rotation={90}
-                            speed={0.2}
-                            colors={["#5227FF", "#ffffff", "#7C3AED"]}
-                            transparent
-                            autoRotate={0}
-                            scale={1}
-                            frequency={1}
-                            warpStrength={1}
-                            mouseInfluence={1}
-                            parallax={0.5}
-                            noise={0.15}
-                            iterations={1}
-                            intensity={1.5}
-                            bandWidth={6}
-                        />
-                    </div>
+                <aside className="relative hidden min-h-[280px] overflow-hidden bg-gradient-to-br from-violet-700 via-slate-950 to-slate-900 lg:block" aria-label="Area ilustrasi error">
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none font-black leading-none tracking-[-0.08em] text-white/90" aria-hidden="true"><span className="text-[clamp(12rem,24vw,24rem)]">{status}</span></div>
                 </aside>
             </main>
