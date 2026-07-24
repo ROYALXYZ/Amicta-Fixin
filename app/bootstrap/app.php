@@ -43,6 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            // Let Laravel handle authentication exceptions (redirect to login)
+            if ($exception instanceof \Illuminate\Auth\AuthenticationException) {
+                return null;
+            }
+
             $status = $exception instanceof HttpExceptionInterface ? $exception->getStatusCode() : 500;
             $copy = match ($status) {
                 403 => ['Akses ditolak', 'Anda tidak memiliki izin untuk membuka halaman ini.', 'Akun Anda tidak memiliki role atau akses tenant yang diperlukan.'],
