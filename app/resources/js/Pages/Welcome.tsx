@@ -242,7 +242,7 @@ export default function Welcome({ auth, ownerMode = false }: PageProps<{ laravel
                         <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
                             <div className="max-w-sm">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="flex size-8 items-center justify-center rounded-lg bg-white text-violet-800"><WrenchIcon className="size-4" /></div>
+                                    <img src="/assets/logo_tanpa_fixin.png" alt="FixIn Logo" className="size-8 rounded-lg object-contain" />
                                     <span className="text-lg font-extrabold">Fix<span className="text-violet-200">In</span></span>
                                 </div>
                                 <p className="mt-5 text-sm leading-relaxed text-violet-100">Platform operasional terpadu untuk menjaga laporan, pekerjaan, dan bukti perbaikan tetap sinkron.</p>
